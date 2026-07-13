@@ -9,6 +9,10 @@ app.use(express.json())
 app.use(express.urlencoded());
 app.use(cors())
 
+const userRouter = require('./routes/user')
+
+app.use('/user', userRouter);
+
 
 // Error handling
 app.use(errorHandler);

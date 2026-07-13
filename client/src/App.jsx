@@ -1,12 +1,15 @@
 import React from 'react'
 import {Routes, Route} from 'react-router-dom'
 import Register from './pages/Register'
+import { Toaster } from "react-hot-toast";
+
 
 import Login from './pages/Login'
 
 const App = () => {
   return (
     <>
+    <Toaster />
     <Routes>
       <Route path='/register' element={<Register/>}/>
       <Route path='/login' element={<Login/>}/>

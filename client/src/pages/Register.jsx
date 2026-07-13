@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { CalendarRange, CarFrontIcon, CreditCard, Crown, ShieldCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios'
+import { toast } from "react-hot-toast";
 const Register = () => {
 
     const [firstName, setFirstName] = useState("");
@@ -11,10 +13,36 @@ const Register = () => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const navigate = useNavigate()
 
-    const handleSubmit = () => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log(password, email)
+
+        const data = {
+            Fname: firstName,
+            Lname: lastName,
+            email: email,
+            CompanyName: company,
+            password: password
+        };
+
+        try {
+            const response = await axios.post('http://localhost:8000/user/register', data);
+            if (response && response.data) {
+                toast.success(response.data.message);
+                setLastName("");
+                setFirstName("");
+                setCompany("");
+                setEmail("");
+                setPassword("");
+            } else {
+                toast.error("Unexpected response from server.")
+            }
+        } catch (error) {
+            const errorMessage =
+                error.response?.data?.message || "something went wrong!";
+            toast.error(errorMessage);
+        }
     }
+
     return (
         <div className='bg-sky-200/50 flex flex-col md:flex-row'>
 
@@ -166,8 +194,7 @@ const Register = () => {
 
                     <div className='mt-2 flex flex-col'>
                         <button
-                            className='h-12 rounded-2xl bg-blue-600 text-white text-md font-bold'
-                            onClick={handleSubmit}>Create Account</button>
+                            className='h-12 rounded-2xl bg-blue-600 text-white text-md font-bold'>Create Account</button>
                     </div>
 
                     <div className='mt-2 flex flex-col'>
