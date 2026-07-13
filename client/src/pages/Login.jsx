@@ -1,16 +1,43 @@
 import React, { useState } from 'react'
 import { CalendarRange, CreditCard, Crown, ShieldCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast'
+import axios from 'axios'
 const Login = () => {
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate()
 
-    const handleSubmit = () => {
-        e.preventDefault();
-        console.log(password, email)
+   const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+        const user = {
+            email,
+            password,
+            
+        };
+        
+
+        const response = await axios.post(
+            `${import.meta.env.VITE_URL}/user/login`,
+            user,
+            {withCredentials: true,}
+        );
+
+
+        if(response.data.success){
+            toast.success(response.data.message);
+            setEmail("");
+            setPassword("");
+            navigate('/quotes')
+        }
+
+    } catch (error) {
+        toast.error(error.response?.data?.message || error.message);
     }
+};
     return (
         <div className='bg-sky-200/50 flex flex-col md:flex-row'>
 
@@ -111,7 +138,7 @@ const Login = () => {
                     <div className='mt-2 flex flex-col'>
                         <button 
                         className='h-12 rounded-2xl bg-blue-600 text-white text-md font-bold'
-                        onClick={handleSubmit}>Login to dashboard</button>
+                        >Login to dashboard</button>
                     </div>
 
                     <div className='mt-2 flex flex-col'>

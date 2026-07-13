@@ -25,7 +25,7 @@ const Register = () => {
         };
 
         try {
-            const response = await axios.post('http://localhost:8000/user/register', data);
+            const response = await axios.post(`${import.meta.env.VITE_URL}/user/register `, data);
             if (response && response.data) {
                 toast.success(response.data.message);
                 setLastName("");
