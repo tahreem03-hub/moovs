@@ -1,5 +1,6 @@
 
 // create an error object to send to Global error handler middleware
+/// make custom error
 class ErrorHandler extends Error{
     constructor(message, statusCode){
         super(message);
