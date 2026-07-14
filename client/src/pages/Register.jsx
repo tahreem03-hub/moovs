@@ -16,6 +16,11 @@ const Register = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        if (password !== confirmPassword) {
+            toast.error("Passwords do not match");
+            return;
+        }
+
         const data = {
             Fname: firstName,
             Lname: lastName,
@@ -33,6 +38,7 @@ const Register = () => {
                 setCompany("");
                 setEmail("");
                 setPassword("");
+                setConfirmPassword("")
             } else {
                 toast.error("Unexpected response from server.")
             }
