@@ -20,6 +20,7 @@ const App = () => {
 
         <Route element={<Layout />}>
           <Route path='/quotes' element={<Quotes />} />
+          <Route path="/quotes/create" element={<Quotes />} />
         </Route>
 
 

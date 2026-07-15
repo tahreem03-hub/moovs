@@ -8,7 +8,7 @@ const Layout = () => {
       <Header />
       <Sidebar />
 
-      <main className="sm:ml-25 pt-22 h-screen overflow-y-auto p-6">
+      <main className="sm:ml-25 pt-18 h-screen overflow-y-auto">
         <Outlet />
       </main>
     </>

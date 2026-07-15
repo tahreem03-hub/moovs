@@ -23,10 +23,10 @@ const QuotesDashboard = () => {
     }
 
     return (
-        <div>
+        <div className='min-h-screen w-80 border-r border-gray-400/20 '>
             {/* title */}
 
-            <div className='h-full w-75  border-b border-gray-300 pb-4'>
+            <div className='p-3 border-b border-gray-300 pb-4'>
 
                 <div className='flex justify-between pb-3'>
                     <h1 className='text-2xl font-bold'>Quotes</h1>
