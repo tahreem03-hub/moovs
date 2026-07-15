@@ -7,7 +7,10 @@ const Layout = () => {
     <>
       <Header />
       <Sidebar />
-      <Outlet />
+
+      <main className="sm:ml-25 pt-22 h-screen overflow-y-auto p-6">
+        <Outlet />
+      </main>
     </>
   );
 };
