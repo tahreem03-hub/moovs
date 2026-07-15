@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import QuotesDashboard from '../components/QuotesDashboard'
-import QuotesDetails from '../components/QuotesDetails'
-import QuoteForm from '../components/QuoteForm';
+import QuotesDashboard from '../components/quotes/QuotesDashboard'
+import QuotesDetails from '../components/quotes/QuotesDetails'
+import QuoteForm from '../components/quotes/QuoteForm';
 import { useLocation } from 'react-router-dom';
 
 const Quotes = () => {
@@ -21,9 +21,8 @@ const Quotes = () => {
 
         <div>
           <QuotesDashboard />
-          {isFormOpen && <QuoteForm isFormOpen={isFormOpen} />}
+          <QuoteForm isFormOpen={isFormOpen} />
         </div>
-
         <QuotesDetails />
 
       </div>

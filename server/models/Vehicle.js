@@ -165,3 +165,5 @@ const vehicleSchema = new Schema({
     blockQuoteReq: { type: Boolean },  // pro feature
     blockResOnConflict: { type: Boolean },  // pro feature
 })
+
+module.exports = mongoose.model("Vehicle", vehicleSchema);

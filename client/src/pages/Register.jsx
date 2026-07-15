@@ -200,7 +200,7 @@ const Register = () => {
 
                     <div className='mt-2 flex flex-col'>
                         <button
-                            className='h-12 rounded-2xl bg-blue-600 text-white text-md font-bold'>Create Account</button>
+                            className='h-12 rounded-2xl bg-blue-600/95 text-white text-md font-bold'>Create Account</button>
                     </div>
 
                     <div className='mt-2 flex flex-col'>

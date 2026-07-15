@@ -1,8 +1,11 @@
+
+
+
 import React, { useEffect, useState } from 'react'
 
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-const QuotesDashboard = () => {
+const ReservationsDashboard = () => {
 
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -29,10 +32,10 @@ const QuotesDashboard = () => {
             <div className='p-3 border-b border-gray-300 pb-4'>
 
                 <div className='flex justify-between pb-3'>
-                    <h1 className='text-2xl font-bold'>Quotes</h1>
-                    <button className='rounded text-white bg-blue-600 text-lg w-20 h-9'
+                    <h1 className='text-2xl font-bold text-black/90'>Reservations</h1>
+                    <button className='rounded text-white bg-blue-600/95 text-lg w-20 h-9'
                         onClick={() => navigate({
-                            pathname: "/quotes/create",
+                            pathname: "/reservations/create",
                             search: `?${searchParams.toString()}`
                         })}>
                     Create
@@ -62,4 +65,4 @@ const QuotesDashboard = () => {
     )
 }
 
-export default QuotesDashboard
+export default ReservationsDashboard

@@ -21,12 +21,27 @@ const stopSchema = new Schema(
     },
 
     // required true is missing in schema
-    address: addressSchema,  
+    address: {
+      type: addressSchema,
+      required: function () {
+        return this.locationType === "address";
+      }
+    },
 
     // Airport-specific fields (only when locationType === 'airport')
     airport: {
-      code: String,        // e.g. "JFK"
-      name: String,
+      code: {
+        type: String,
+        required: function () {
+          return this.locationType === "airport";
+        },
+      },
+      name: {
+        type: String,
+        required: function () {
+          return this.locationType === "airport";
+        },
+      },
       airline: String,
       flightNumber: String,
       terminal: String,
@@ -79,7 +94,7 @@ const quoteSchema = new Schema(
     },
     assignedMember: {
       type: Schema.Types.ObjectId,
-      ref: 'User', 
+      ref: 'User',
       required: true,
       // check if it is really required???
     },
@@ -118,6 +133,7 @@ const quoteSchema = new Schema(
           const hasDropoff = v.some((s) => s.type === 'dropoff');
           return hasPickup && hasDropoff;
         },
+        required: true,
         message: 'A quote must have at least a pick-up and a drop-off stop.',
       },
     },
@@ -138,7 +154,7 @@ const quoteSchema = new Schema(
     ],
     */
 
-    vehicle:{
+    vehicle: {
       type: Schema.Types.ObjectId,
       ref: 'Vehicle',
       required: true
@@ -162,7 +178,7 @@ const quoteSchema = new Schema(
     /* STATUS / WORKFLOW (Save quote dropdown: save, save & send, etc.) */
     status: {
       type: String,
-      enum: ['new', 'sent', 'draft', 'archived', 'all'],
+      enum: ['new', 'sent', 'draft', 'archived'],
       default: 'draft',
       index: true,
     },
@@ -187,13 +203,15 @@ const quoteSchema = new Schema(
 
 /* ---------- Hooks & helpers ---------- */
 
-// Auto-generate quote number
-quoteSchema.pre('save', async function (next) {
+// Auto-generate quote number can change to sequestional count later
+quoteSchema.pre("save", function (next) {
   if (this.isNew && !this.quoteNumber) {
-    const count = await this.constructor.countDocuments();
     const year = new Date().getFullYear();
-    this.quoteNumber = `Q-${year}-${String(count + 1).padStart(5, '0')}`;
+    const random = Math.floor(10000 + Math.random() * 90000);
+
+    this.quoteNumber = `Q-${year}-${random}`;
   }
+
   next();
 });
 
