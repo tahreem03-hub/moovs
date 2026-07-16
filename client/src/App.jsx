@@ -1,5 +1,5 @@
-import React from 'react'
-import { Routes, Route } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { Routes, Route, useNavigate} from 'react-router-dom'
 import Register from './pages/Register'
 import { Toaster } from "react-hot-toast";
 
@@ -18,6 +18,12 @@ import CRM from './pages/CRM';
 
 
 const App = () => {
+
+  const navigate= useNavigate();
+
+  useEffect(()=>navigate('/quotes'),[])
+
+
   return (
     <>
       <Toaster />

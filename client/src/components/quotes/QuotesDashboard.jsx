@@ -30,7 +30,7 @@ const QuotesDashboard = () => {
 
                 <div className='flex justify-between pb-3'>
                     <h1 className='text-2xl font-bold text-black/90'>Quotes</h1>
-                    <button className='rounded text-white bg-blue-600/50 text-lg w-20 h-9'
+                    <button className='rounded text-white bg-blue-600/95 text-lg w-20 h-9'
                         onClick={() => navigate({
                             pathname: "/quotes/create",
                             search: `?${searchParams.toString()}`
