@@ -11,10 +11,12 @@ import Reservations from './pages/Reservations';
 import Dispatch from './pages/Dispatch';
 import DriverTracking from './pages/DriverTracking';
 import Vehicles from './pages/Vehicles';
-import Contacts from './pages/Contacts';
+import Contacts from './pages/contacts/Contacts';
 import Invoices from './pages/Invoices';
 import Payables from './pages/Payables';
 import CRM from './pages/CRM';
+import Companies from './pages/contacts/Companies';
+import Affiliates from './pages/contacts/Affiliates';
 
 
 const App = () => {
@@ -45,6 +47,14 @@ const App = () => {
 
 
           <Route path='/contacts' element={<Contacts/>}/>
+          <Route path='/contacts/create' element={<Contacts/>}/>
+
+          <Route path='/companies' element={<Companies/>}/>
+          <Route path='/companies/create' element={<Companies/>}/>
+          
+          <Route path='/affiliates' element={<Affiliates/>}/>
+          <Route path='/affiliates/create' element={<Affiliates/>}/>
+
           <Route path='/invoices' element={<Invoices/>}/>
           <Route path='/payables' element={<Payables/>}/>
           <Route path='/crm' element={<CRM/>}/>
