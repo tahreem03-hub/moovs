@@ -1,10 +1,10 @@
 import { Bus, Car, Van, ChevronDown, Search } from 'lucide-react'
 import React, { useState, useRef, useEffect } from 'react'
 
-const RequiredInfo = () => {
-    const handleSubmit = (e) => {
-        e.preventDefault();
-    }
+const RequiredInfo = ({ formData, setFormData }) => {
+
+
+
 
     const vehicleType = [
         { name: "ADA Mini Coach", icon: <Bus /> },
@@ -34,6 +34,25 @@ const RequiredInfo = () => {
     const [selected, setSelected] = useState(null);
     const dropdownRef = useRef(null);
 
+    const handleChange = (e) => {
+        setFormData(prev => ({
+            ...prev,
+            [e.target.name]: e.target.value
+        }));
+    };
+
+    const handleVehicleType = (item) => {
+        setSelected(item);
+
+        setFormData(prev => ({
+            ...prev,
+            type: item.name
+        }));
+
+        setOpen(false);
+        setSearch("");
+    };
+
     // close on outside click
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -53,9 +72,13 @@ const RequiredInfo = () => {
         <div>
             <h1 className='text-black/90 text-xl font-bold'>Required Info</h1>
 
-            <form onSubmit={handleSubmit}>
+            
 
-                <input type="text"
+                <input
+                    type="text"
+                    name='name'
+                    value={formData.name}
+                    onChange={handleChange}
                     required
                     className='mt-3 hover:border-black outline-none focus:border-blue-600 focus:border-2 border border-gray-500/50 w-full h-13 rounded p-4'
                     placeholder='Vehicle Name *' />
@@ -68,8 +91,8 @@ const RequiredInfo = () => {
                         className={`flex items-center justify-between w-full h-13 rounded p-4 border outline-none
                             ${open ? "border-blue-600 border-2" : "border-gray-500/50 hover:border-black"}`}
                     >
-                        <span className={selected ? "text-black" : "text-gray-500"}>
-                            {selected ? selected.name : "Vehicle Type *"}
+                        <span className={formData.type ? "text-black" : "text-gray-500"}>
+                            {formData.type || "Vehicle Type *"}
                         </span>
                         <ChevronDown
                             className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
@@ -97,11 +120,7 @@ const RequiredInfo = () => {
                                 {filtered.map((item, index) => (
                                     <div
                                         key={index}
-                                        onClick={() => {
-                                            setSelected(item);
-                                            setOpen(false);
-                                            setSearch("");
-                                        }}
+                                        onClick={() => handleVehicleType(item)}
                                         className={`flex items-center gap-3 px-4 py-3 cursor-pointer text-sm
                                             ${selected?.name === item.name ? "bg-blue-50" : "hover:bg-gray-50"}`}
                                     >
@@ -126,10 +145,12 @@ const RequiredInfo = () => {
 
                 <input type="text"
                     required
+                    name="passengerCapacity"
+                    value={formData.passengerCapacity}
+                    onChange={handleChange}
                     className='mt-3 hover:border-black outline-none focus:border-blue-600 focus:border-2 border border-gray-500/50 w-full h-13 rounded p-4'
                     placeholder='Passenger Capacity *' />
 
-            </form>
         </div>
     )
 }

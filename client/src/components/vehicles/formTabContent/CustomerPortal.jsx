@@ -1,8 +1,10 @@
 import React from 'react'
 
-const CustomerPortal = () => {
+const CustomerPortal = ({ formData, setFormData }) => {
   return (
     <div>
+
+      coming soon
       
     </div>
   )

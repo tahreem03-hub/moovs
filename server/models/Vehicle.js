@@ -131,17 +131,18 @@ const vehicleSchema = new Schema({
 
     /* optional info */
     licenseNo: { type: String },
-    Description: { type: String, trim: true },
+    description: { type: String, trim: true },
+    exteriorColor: {type:String, trim:true},
     vinNumber: { type: String },
-    CancellationPolicy: { type: Number },
-    InsurancePolicy: { type: Number },
+    cancellationPolicy: { type: Number },
+    insurancePolicy: { type: Number },
     // pro feature
-    GarageLocation: { type: String },
+    garageLocation: { type: String },
 
     /* photos -- .jpg .png files */
     images: {
         type: [{
-            url: { type: String, required: true },
+            url: { type: String},
             isPrimary: { type: Boolean, default: false }
         }],
         validate: {
