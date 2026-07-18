@@ -1,10 +1,15 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-const addressSchema = require('./schemas/address.schema');
 const commentSchema = require('./schemas/comment.schema');
 
-/* ---------- Sub-schemas (contact-specific, so they stay in this file) ---------- */
+/*
+ * ALIGNMENT CHANGE:
+ * The form collects addresses as single-line text inputs (Home Address,
+ * Work Address, Billing Address), so addresses are stored as plain trimmed
+ * Strings instead of the structured addressSchema. If you later switch the UI
+ * to a structured / autocomplete address picker, swap these back.
+ */
 
 /*
  * PCI COMPLIANCE — IMPORTANT:
@@ -19,11 +24,11 @@ const paymentMethodSchema = new Schema(
       enum: ['stripe', 'square', 'authorize_net', 'other'],
       default: 'stripe',
     },
-    gatewayCustomerId: String,        // e.g. Stripe customer ID
-    gatewayPaymentMethodId: String,   // e.g. Stripe payment method / card token
+    gatewayCustomerId: String, // e.g. Stripe customer ID
+    gatewayPaymentMethodId: String, // e.g. Stripe payment method / card token
 
     // Safe-to-store display metadata only
-    brand: String,                    // 'visa', 'mastercard', ...
+    brand: String, // 'visa', 'mastercard', ...
     last4: {
       type: String,
       match: /^\d{4}$/,
@@ -35,7 +40,7 @@ const paymentMethodSchema = new Schema(
     billing: {
       fullName: { type: String, trim: true },
       country: { type: String, default: 'US' },
-      address: addressSchema,
+      address: { type: String, trim: true }, // single-line input in the form
       cardholderEmail: {
         type: String,
         trim: true,
@@ -49,34 +54,34 @@ const paymentMethodSchema = new Schema(
   { _id: true, timestamps: true }
 );
 
-/* ---------- Main Contact schema ---------- */
-
 const contactSchema = new Schema(
   {
     /* BASIC INFO */
-    firstName: { type: String, required: true, trim: true },
-    lastName: { type: String, required: true, trim: true },
+    firstName: { type: String, required: [true, 'First name is required'], trim: true },
+    lastName: { type: String, required: [true, 'Last name is required'], trim: true },
     email: {
       type: String,
-      required: true,
+      required: [true, 'Email is required'],
       trim: true,
       lowercase: true,
       match: [/^\S+@\S+\.\S+$/, 'Invalid email address'],
     },
     phone: {
-      countryCode: { type: String, default: '+1' }, // flag dropdown
-      number: { type: String, required: true, trim: true },
+      countryCode: { type: String, default: '+1' },
+      // react-phone-number-input returns E.164 (e.g. "+13105551234"),
+      // which already includes the country code
+      number: { type: String, required: [true, 'Phone number is required'], trim: true },
     },
 
     /* OPTIONAL INFO */
     company: {
       type: Schema.Types.ObjectId,
-      ref: 'Company', // dropdown in the form → companies are their own collection
+      ref: 'Company',
       default: null,
     },
     companyPosition: { type: String, trim: true },
-    homeAddress: addressSchema,
-    workAddress: addressSchema,
+    homeAddress: { type: String, trim: true }, // aligned with form's text input
+    workAddress: { type: String, trim: true }, // aligned with form's text input
 
     /* BILLING — tokenized payment methods, supports multiple cards */
     paymentMethods: [paymentMethodSchema],
@@ -102,7 +107,6 @@ const contactSchema = new Schema(
       default: 'individual',
     },
     isActive: { type: Boolean, default: true },
-    isDeleted: { type: Boolean, default: false }, // soft delete
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
@@ -121,7 +125,6 @@ contactSchema.virtual('fullName').get(function () {
 
 /* ---------- Indexes ---------- */
 
-// Fast lookup for the "Search for booking contact" field on the quote form
 contactSchema.index(
   { firstName: 'text', lastName: 'text', email: 'text' },
   { name: 'contact_search' }

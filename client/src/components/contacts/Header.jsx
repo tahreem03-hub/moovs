@@ -9,14 +9,26 @@ const Header = () => {
     const path = location.pathname
 
     // Map paths to display names
-    const pageNames = {
-        '/contacts': 'Contacts',
-        '/affiliates': 'Affiliates',
-        '/companies': 'Companies',
-        '/contacts/create': 'Contacts',
-        '/affiliates/create': 'Affiliates',
-        '/companies/create': 'Companies',
-    }
+    // Get the base route name
+    const getPageTitle = () => {
+        const path = location.pathname;
+
+        // For contacts routes
+        if (path.includes('/contact')) {
+            return 'Contacts';
+        }
+
+        // For companies routes
+        if (path.includes('/company') || path.includes('/companies')) {
+            return 'Companies';
+        }
+
+        // For affiliates routes
+        if (path.includes('/affiliate')) {
+            return 'Affiliates';
+        }
+
+    };
 
     const buttons = [
         { name: "CONTACTS", path: '/contacts' },
@@ -24,7 +36,7 @@ const Header = () => {
         { name: "AFFILIATES", path: '/affiliates' },
     ]
 
-    const pageTitle = pageNames[path] || path.replace('/', '').toUpperCase()
+    const pageTitle = getPageTitle().toUpperCase();
 
     return (
         <div className='bg-white'>
@@ -39,14 +51,14 @@ const Header = () => {
                         <Search className='w-5.5 h-6 text-blue-600' strokeWidth={1.5} />
                         <input type="text"
                             className='outline-none'
-                            placeholder={`Search ${pageTitle}...`}
+                            placeholder={`Search ${getPageTitle()}...`}
                         />
                     </div>
 
                     <div>
                         <button className='rounded text-white bg-blue-600/95 text-md px-4 py-2'
                             onClick={() => navigate('create')}> {/* Changed to show form */}
-                            Create {pageTitle}
+                            Create {getPageTitle()}
                         </button>
                     </div>
                 </div>

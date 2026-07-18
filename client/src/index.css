@@ -1,5 +1,253 @@
 @import "tailwindcss";
 
+
 @theme{
   --color-primary: blue;
+}
+
+.PhoneInputInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 14px;
+}
+
+.PhoneInputCountrySelect {
+  cursor: pointer;
+}
+
+.PhoneInputCountryIcon {
+  width: 22px;
+  height: 16px;
+}
+
+/* AddCompanyModal.css — matches the Add New Company design */
+
+.acm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 40px 16px;
+}
+
+.acm-modal {
+  background: #fff;
+  width: 100%;
+  max-width: 900px;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-top: 6px solid #3b2225;
+}
+
+/* ---------- Header ---------- */
+.acm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 32px;
+  border-bottom: 1px solid #e2e4e8;
+}
+
+.acm-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 26px;
+  line-height: 1;
+  color: #1a1a1a;
+  padding: 4px;
+}
+
+.acm-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ---------- Body ---------- */
+.acm-body {
+  padding: 32px;
+}
+
+.acm-section-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 20px;
+}
+
+.acm-avatar {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: #dbe4fd;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.acm-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.acm-avatar svg {
+  width: 44px;
+  height: 44px;
+}
+
+.acm-photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.acm-btn-outline {
+  background: #fff;
+  color: #2563eb;
+  border: 1.5px solid #2563eb;
+  border-radius: 8px;
+  padding: 12px 26px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.acm-btn-outline:hover {
+  background: #dbe4fd;
+}
+
+.acm-photo-hint p {
+  margin: 0;
+}
+
+.acm-photo-hint p:first-child {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.acm-photo-hint p:last-child {
+  color: #8a8f98;
+  font-size: 13px;
+}
+
+.acm-remove-photo {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ---------- Fields ---------- */
+.acm-group-label {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 28px 0 14px;
+}
+
+.acm-field {
+  margin-bottom: 16px;
+}
+
+.acm-field input,
+.acm-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 16px;
+  color: #1a1a1a;
+  padding: 18px 16px;
+  border: 1px solid #e2e4e8;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: #fff;
+  resize: vertical;
+}
+
+.acm-field input::placeholder,
+.acm-field textarea::placeholder {
+  color: #9aa0a8;
+}
+
+.acm-field input:focus,
+.acm-field textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.acm-field.invalid input,
+.acm-field.invalid textarea {
+  border-color: #dc2626;
+}
+
+.acm-error {
+  display: block;
+  color: #dc2626;
+  font-size: 12.5px;
+  margin-top: 5px;
+}
+
+.acm-server-error {
+  color: #dc2626;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/* ---------- Footer ---------- */
+.acm-footer {
+  background: #f7f8f9;
+  border-top: 1px solid #e2e4e8;
+  padding: 20px 32px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.acm-btn-save {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 13px 34px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.acm-btn-save:hover {
+  background: #1d4fd8;
+}
+
+.acm-btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+  .acm-body,
+  .acm-header,
+  .acm-footer {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
 }
