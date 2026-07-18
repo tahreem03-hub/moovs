@@ -11,6 +11,12 @@ const vehicleRouter=require('./routes/vehicle')
 const contactRouter=require('./routes/contact')
 const companyRouter=require('./routes/company')
 
+const cancellationRouter=require('./routes/cancellationRoutes')
+app.use('/insurance', require('./routes/insuranceRoutes'));
+app.use('/terms', require('./routes/termsRoutes'));
+app.use('/driver', require('./routes/driverRoutes'));
+app.use('/member', require('./routes/memberRoutes'));
+
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -19,9 +25,11 @@ app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded());
 app.use(cors({
-        origin: "http://localhost:5173",
-        credentials: true,
-    }))
+  origin: 'http://localhost:5173', // Your frontend URL
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 
 
@@ -30,6 +38,10 @@ app.use('/quote', quoteRouter);
 app.use('/vehicle', vehicleRouter);
 app.use('/contact', contactRouter)
 app.use('/company', companyRouter)
+
+app.use('/cancellation', cancellationRouter)
+
+
 
 
 

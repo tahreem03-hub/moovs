@@ -10,7 +10,7 @@ import Pricing from './formTabContent/Pricing';
 import CustomerPortal from './formTabContent/CustomerPortal';
 import toast from 'react-hot-toast'
 
-const VehicleForm = () => {
+const VehicleForm = ({onVehicleCreated}) => {
 
 
 
@@ -113,6 +113,10 @@ const VehicleForm = () => {
 
     const [active, setActive] = useState(0);
 
+      const closeForm = () => {
+    navigate('/vehicles');
+  };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -133,6 +137,12 @@ const VehicleForm = () => {
                 toast.error(data.message);
                 
             }
+
+                  if (onVehicleCreated) {
+        onVehicleCreated(); // This will refresh the list without page reload
+      }
+
+      closeForm();
 
         } catch (error) {
             toast.error("Submit Error:", error);

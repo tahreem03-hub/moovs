@@ -1,25 +1,25 @@
 import { Search } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import VehicleForm from '../components/vehicles/VehicleForm';
+import VehicleUpdateForm from '../components/vehicles/VehicleUpdateForm';
 import axios from 'axios'
 import toast from 'react-hot-toast';
 
-
-
-// Fixed: Proper React component with capital letter and return statement
 const VehicleCard = ({ vehicle }) => {
   const navigate = useNavigate();
   return (
-    <div className='w-200 h-22 p-4 flex bg-white mb-2 hover:bg-gray-300/10
+    <div className='w-200 p-4 flex items-center bg-white mb-2 hover:bg-gray-50
      rounded transition border border-gray-400/20 cursor-pointer'
-      onClick={() => { navigate(`/update/${vehicle._id}`) }}>
-      <div className='flex items-center'>
-        <h1 className='text-xs font-bold w-30'>{vehicle.name}</h1>
-        <h1 className='text-xs'>{vehicle.type}</h1>
-      </div>
-      <div>
-        {/* Add your additional content here */}
+      onClick={() => { navigate(`update/${vehicle._id}`) }}>
+      <div className='flex items-center gap-4 flex-1'>
+        <div className='w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center'>
+          <span className='text-xs font-bold'>{vehicle.name?.substring(0, 2).toUpperCase()}</span>
+        </div>
+        <div>
+          <h1 className='text-sm font-bold'>{vehicle.name}</h1>
+          <p className='text-xs text-gray-500'>{vehicle.type} • {vehicle.passengerCapacity} Seats</p>
+        </div>
       </div>
     </div>
   );
@@ -27,9 +27,12 @@ const VehicleCard = ({ vehicle }) => {
 
 const Vehicles = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = searchParams.get('tab') || 'my-vehicles';
   const [vehicles, setVehicles] = useState([]);
+
+  const isUpdateRoute = location.pathname.includes('/update/');
 
   const changeParam = (tab) => {
     setSearchParams({ tab });
@@ -56,13 +59,17 @@ const Vehicles = () => {
     getAllVehicles();
   }, []);
 
+  const refreshVehicles = () => {
+    getAllVehicles();
+  };
+
   return (
     <div>
       <div>
         {/* header */}
         <div className='border border-b border-gray-400/20'>
           <div className='flex justify-between p-4'>
-            <h1 className='text-3xl font-bold text-black/90'>Vehicles</h1>
+            <h1 className='text-2xl font-bold text-black/90'>Vehicles</h1>
             <div className="border border-gray-400 rounded flex items-center px-2 
                 hover:border-black/70 
                 focus-within:border-blue-500 
@@ -115,17 +122,9 @@ const Vehicles = () => {
           )}
         </div>
       </div>
-      <VehicleForm />
-      {/* Conditionally render VehicleForm */}
-      {/*showForm && (
-        <VehicleForm
-          onClose={() => setShowForm(false)}
-          onSuccess={() => {
-            setShowForm(false);
-            getAllVehicles(); // Refresh the list
-          }}
-        />
-      )*/}
+      
+      <VehicleForm onVehicleCreated={refreshVehicles} />
+      <VehicleUpdateForm onVehicleUpdated={refreshVehicles} />
     </div>
   )
 }
