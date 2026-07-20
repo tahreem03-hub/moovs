@@ -21,7 +21,7 @@ import Settings from './pages/Settings';
 
 
 import General from './components/settings/Genaral';
-import CustomerPortal from './components/settings/CustomerPortal';
+import CustomerPortal from './components/settings/customerPortal/CustomerPortal';
 import Cancellation from './components/settings/Cancellation';
 import Insurance from './components/settings/Insurance';
 import Terms from './components/settings/Terms';
@@ -33,6 +33,7 @@ import Website from './components/settings/Website';
 import MoovsMarket from './components/settings/MoovsMarket';
 import Billing from './components/settings/Billing';
 import Academy from './components/settings/Academy';
+import TripRuleForm from './components/settings/TripRuleForm';
 
 
 const App = () => {
@@ -82,20 +83,27 @@ const App = () => {
 
         </Route>
 
-        <Route path='/settings' element={<Settings />} />
-
 
         <Route path="/settings" element={<Settings />}>
           <Route index element={<General />} />  {/* /settings */}
           <Route path="general" element={<General />} />  {/* /settings/general */}
-          <Route path="customer-portal" element={<CustomerPortal />} />
+
+
+          <Route path="/settings/customer-portal" element={<CustomerPortal />} />
+          <Route path="/settings/customer-portal" element={<CustomerPortal />}>
+            <Route index element={<CustomerPortal />} />
+          </Route>
           <Route path="cancellation" element={<Cancellation />} />
           <Route path="insurance" element={<Insurance />} />
           <Route path="terms" element={<Terms />} />
           <Route path="drivers" element={<Drivers />} />
           <Route path="members" element={<Members />} />
           <Route path="zone-pricing" element={<ZonePricing />} />
+
           <Route path="trip-rules" element={<TripRules />} />
+          <Route path="trip-rules/create" element={<TripRuleForm />} />
+          <Route path="trip-rules/edit/:id" element={<TripRuleForm />} />
+
           <Route path="website" element={<Website />} />
           <Route path="moovs-market" element={<MoovsMarket />} />
           <Route path="billing" element={<Billing />} />
