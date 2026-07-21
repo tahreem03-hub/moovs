@@ -33,11 +33,11 @@ const createUser = async (req, res, next) => {
 
         sendToken(newUser, 201, res);
 
-        res.status(201).json({
+        /*res.status(201).json({
             success: true,
             message: "User created successfully",
             user: newUser
-        });
+        });*/
 
 
 
@@ -54,7 +54,7 @@ const loginUser = async (req, res, next) => {
         const { email, password } = req.body
         const user = await User.findOne({ email })
 
-        
+
         if (!user) {
             return next(new ErrorHandler("User not found", 400));
         }
@@ -67,10 +67,10 @@ const loginUser = async (req, res, next) => {
 
        
         sendToken(user, 200, res);
-        res.status(200).json({
+       /* res.status(200).json({
             success: true,
             message: "Login successful",
-        });
+        });*/
 
     } catch (error) {
         next(new ErrorHandler(error.message, 400));
@@ -78,8 +78,22 @@ const loginUser = async (req, res, next) => {
 };
 
 
+
+// controller for admin check
+const getMe = async (req, res) => {
+    req.user.password = undefined;
+    res.status(200).json({ success: true, user: req.user });
+};
+
+const logout = (req, res) => {
+    res.cookie("token", null, { expires: new Date(Date.now()), httpOnly: true })
+       .json({ success: true, message: "Logged out" });
+};
+
 module.exports = {
     createUser,
-    loginUser
+    loginUser,
+    getMe,
+    logout
 };
 

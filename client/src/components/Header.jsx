@@ -1,8 +1,11 @@
 import { Crown, ListCheck, Mail, MessagesSquare, Search } from 'lucide-react'
 import React from 'react'
 import { NavLink } from 'react-router-dom'
+import { useAuth } from "../context/AuthContext";
 
 const Header = () => {
+
+    const { user, logout } = useAuth();
 
     return (
         <div className="fixed top-0 left-0 right-0 h-18 bg-white z-50 flex border border-gray-300">
@@ -31,22 +34,28 @@ const Header = () => {
                 <div className='flex items-center space-x-2'>
 
                     <NavLink to={'/getting-started'} className={({ isActive }) => `px-0.5 h-15 rounded flex flex-col items-center justify-center transition ${isActive ? "bg-sky-200/50 text-blue-600" : "text-gray-800 hover:bg-sky-200/30"}`}>
-                        <ListCheck className='h-6 w-6' strokeWidth={1}/>
+                        <ListCheck className='h-6 w-6' strokeWidth={1} />
                         <h1 className='text-[10px] text-gray-800 font-medium'> Getting Started </h1>
                     </NavLink>
                     <NavLink to={'/getting-started'} className={({ isActive }) => `px-0.5 h-15 rounded flex flex-col items-center justify-center transition ${isActive ? "bg-sky-200/50 text-blue-600" : "text-gray-800 hover:bg-sky-200/30"}`}>
-                        <Mail className='h-6 w-6' strokeWidth={1}/>
+                        <Mail className='h-6 w-6' strokeWidth={1} />
                         <h1 className='text-[10px] text-gray-800 font-medium'> Compose Email</h1>
                     </NavLink>
                     <NavLink to={'/getting-started'} className={({ isActive }) => `px-0.5 h-15 rounded flex flex-col items-center justify-center transition ${isActive ? "bg-sky-200/50 text-blue-600" : "text-gray-800 hover:bg-sky-200/30"}`}>
-                        <MessagesSquare className='h-6 w-6' strokeWidth={1}/>
+                        <MessagesSquare className='h-6 w-6' strokeWidth={1} />
                         <h1 className='text-[10px] text-gray-800 font-medium'> Chat</h1>
                     </NavLink>
-                    
+
+                    {user?.role === 'admin' && (
+                        <>
+                            <NavLink to="/admin">Dashboard</NavLink>
+                            <NavLink to="/admin/operators">Operators</NavLink>
+                        </>
+                    )}
+
+                     {user && <button onClick={logout}>Logout</button>}
 
                 </div>
-
-
             </div>
         </div>
     )

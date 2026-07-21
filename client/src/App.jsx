@@ -36,11 +36,19 @@ import Academy from './components/settings/Academy';
 import TripRuleForm from './components/settings/TripRuleForm';
 
 
+import ProtectedRoute from './shared/ProtectedRoute';
+import AdminLayout from './modules/admin/layout/AdminLayout';
+import AdminDashboard from './modules/admin/pages/AdminDashboard';
+import Operators from './modules/admin/pages/Operators';
+import OperatorDetail from './modules/admin/pages/OperatorDetail';
+import Subscriptions from './modules/admin/pages/Subscriptions';
+
+
+
+
 const App = () => {
 
-  const navigate = useNavigate();
 
-  useEffect(() => navigate('/quotes'), [])
 
 
   return (
@@ -108,6 +116,16 @@ const App = () => {
           <Route path="moovs-market" element={<MoovsMarket />} />
           <Route path="billing" element={<Billing />} />
           <Route path="academy" element={<Academy />} />
+        </Route>
+
+
+        <Route element={<ProtectedRoute requiredRole="admin" />}>
+          <Route element={<AdminLayout/>}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/operators" element={<Operators />} />
+            <Route path="/admin/operators/:id" element={<OperatorDetail />} />
+            <Route path="/admin/subscriptions" element={<Subscriptions />} />
+          </Route>
         </Route>
 
       </Routes>

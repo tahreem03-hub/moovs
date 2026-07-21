@@ -3,41 +3,46 @@ import { CalendarRange, CreditCard, Crown, ShieldCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast'
 import axios from 'axios'
+import { useAuth } from "../context/AuthContext";
 const Login = () => {
+    const { loadUser } = useAuth();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate()
 
-   const handleSubmit = async (e) => {
-    e.preventDefault();
+    const handleSubmit = async (e) => {
+        e.preventDefault();
 
-    try {
-        const user = {
-            email,
-            password,
-            
-        };
-        
+        try {
+            const user = {
+                email,
+                password,
 
-        const response = await axios.post(
-            `${import.meta.env.VITE_URL}/user/login`,
-            user,
-            {withCredentials: true,}
-        );
+            };
 
 
-        if(response.data.success){
-            toast.success(response.data.message);
-            setEmail("");
-            setPassword("");
-            navigate('/quotes')
+            const response = await axios.post(
+                `${import.meta.env.VITE_URL}/user/login`,
+                user,
+                { withCredentials: true, }
+            );
+
+
+
+            if (response.data.success) {
+                toast.success(response.data.message);
+                setEmail("");
+                setPassword("");
+                const me = await loadUser();
+                navigate(me?.role === "admin" ? "/admin" : "/quotes");
+            }
+
+        } catch (error) {
+              console.log(error.response?.data); 
+            toast.error(error.response?.data?.message || error.message);
         }
-
-    } catch (error) {
-        toast.error(error.response?.data?.message || error.message);
-    }
-};
+    };
     return (
         <div className='bg-sky-200/50 flex flex-col md:flex-row'>
 
@@ -132,17 +137,17 @@ const Login = () => {
 
                         </div>
                         <span className='font-bold text-blue-600'
-                        onClick={() => navigate('/forgot-password')}>Forgot Password?</span>
+                            onClick={() => navigate('/forgot-password')}>Forgot Password?</span>
                     </div>
 
                     <div className='mt-2 flex flex-col'>
-                        <button 
-                        className='h-12 rounded-2xl bg-blue-600 text-white text-md font-bold'
+                        <button
+                            className='h-12 rounded-2xl bg-blue-600 text-white text-md font-bold'
                         >Login to dashboard</button>
                     </div>
 
                     <div className='mt-2 flex flex-col'>
-                        <h1 className='text-gray-600'>New Here? <span className='text-blue-600 font-bold' onClick={()=>navigate('/register')}>Create an account</span></h1>
+                        <h1 className='text-gray-600'>New Here? <span className='text-blue-600 font-bold' onClick={() => navigate('/register')}>Create an account</span></h1>
                     </div>
 
 

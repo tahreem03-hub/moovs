@@ -9,9 +9,9 @@ const {
   deleteMember,
   getMemberDropdown
 } = require('../controller/memberController');
-const { protect } = require('../middleware/auth');
+const { isAuthenticated } = require('../middleware/auth');
 
-//router.use(protect);
+router.use(isAuthenticated);
 
 router.post('/create', createMember);
 router.get('/list', getMembers);

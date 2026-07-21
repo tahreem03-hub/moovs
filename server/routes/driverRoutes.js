@@ -9,10 +9,10 @@ const {
   deleteDriver,
   getDriverDropdown
 } = require('../controller/driverController');
-const { protect } = require('../middleware/auth');
+const { isAuthenticated } = require('../middleware/auth');
 const upload = require('../middleware/multer');
 
-//router.use(protect);
+router.use(isAuthenticated);
 
 router.post('/create', upload.single('profilePicture'), createDriver);
 router.get('/list', getDrivers);

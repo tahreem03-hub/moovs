@@ -10,9 +10,9 @@ const {
   toggleTripRuleStatus,
   getTripRuleDropdown
 } = require('../controller/tripRuleController');
-const { protect } = require('../middleware/auth');
+const { isAuthenticated } = require('../middleware/auth');
 
-//router.use(protect);
+router.use(isAuthenticated);
 
 router.post('/create', createTripRule);
 router.get('/list', getTripRules);

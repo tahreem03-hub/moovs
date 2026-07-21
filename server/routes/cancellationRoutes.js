@@ -9,9 +9,9 @@ const {
   deletePolicy,
   getPolicyDropdown
 } = require('../controller/cancellationController');
-const { protect } = require('../middleware/auth');
+const { isAuthenticated } = require('../middleware/auth');
 
-//router.use(protect);
+router.use(isAuthenticated);
 
 router.post('/create', createPolicy);
 router.get('/list', getPolicies);

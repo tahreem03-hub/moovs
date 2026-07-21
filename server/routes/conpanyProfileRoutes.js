@@ -12,10 +12,10 @@ const {
   getPreferenceSettings,
   updatePreferenceSettings
 } = require('../controller/companyProfileController');
-const { protect } = require('../middleware/auth');
+const { isAuthenticated } = require('../middleware/auth');
 const upload = require('../middleware/multer');
 
-//router.use(protect);
+router.use(isAuthenticated);
 
 // Company Tab
 router.get('/profile', getCompanyProfile);

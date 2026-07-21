@@ -31,6 +31,37 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+
+
+    // Admin Management Fields
+  phone: {
+    type: String,
+    trim: true
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  subscriptionPlan: {
+    type: String,
+    enum: ['free', 'basic', 'pro', 'enterprise'],
+    default: 'free'
+  },
+  subscriptionStatus: {
+    type: String,
+    enum: ['active', 'inactive', 'trial', 'expired'],
+    default: 'trial'
+  },
+  subscriptionExpiry: {
+    type: Date
+  },
+
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
+},
+
 });
 
 
@@ -40,6 +71,7 @@ userSchema.pre("save", async function (next) {
         return next();
     }
     this.password = await bcrypt.hash(this.password, 10);
+    
 })
 
 userSchema.methods.getJwtToken = function (){

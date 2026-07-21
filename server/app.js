@@ -5,6 +5,9 @@ const app = express();
 const cors = require('cors')
 const errorHandler = require('./middleware/error')
 
+// Import modular admin routes
+const { adminRoutes } = require('./modules/admin');
+
 // CORS HERE - BEFORE ANY ROUTES
 app.use(cors({
   origin: 'http://localhost:5173', // Your frontend URL
@@ -46,7 +49,11 @@ app.use('/trip-rules', require('./routes/tripRuleRoutes'));
 app.use('/customer-portal', require('./routes/customerPortalRoutes'))
 
 
-// Error handling - should be LAST
+
+// Use routes
+app.use('/admin', adminRoutes);
+
+
 app.use(errorHandler);
 
 module.exports = app;

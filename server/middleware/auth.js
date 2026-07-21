@@ -3,7 +3,7 @@ const User = require("../models/User");
 const catchAsyncError = require('./catchAsyncError')
 const ErrorHandler = require("../utils/ErrorHandler");
 
-exports.isAuthenticated = catchAsyncError (async(req, res, next) => {
+const isAuthenticated = catchAsyncError (async(req, res, next) => {
     try {
 
         const { token } = req.cookies;
@@ -31,3 +31,29 @@ exports.isAuthenticated = catchAsyncError (async(req, res, next) => {
         next(new ErrorHandler(error.message, 401));
     }
 });
+
+
+// middleware/auth.js
+// Add authorize middleware for admin
+
+const authorize = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authorized, please login'
+      });
+    }
+    
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: `Not authorized. Required role: ${roles.join(', ')}`
+      });
+    }
+    
+    next();
+  };
+};
+
+module.exports = { isAuthenticated, authorize };

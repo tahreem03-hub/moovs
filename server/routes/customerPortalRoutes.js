@@ -9,10 +9,10 @@ const {
   updatePromoCodes,
   getVehiclesForDropdown
 } = require('../controller/customerPortalController');
-const { protect } = require('../middleware/auth');
+const { isAuthenticated } = require('../middleware/auth');
 const upload = require('../middleware/multer');
 
-//router.use(protect);
+router.use(isAuthenticated);
 
 // Get all settings
 router.get('/', getCustomerPortalSettings);

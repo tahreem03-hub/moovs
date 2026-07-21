@@ -9,7 +9,7 @@ const sendToken = (user, statusCode, res) => {
     sameSite: process.env.NODE_ENV === "PRODUCTION" ? "none" : "lax",
     secure: process.env.NODE_ENV === "PRODUCTION",
   };
-
+user.password = undefined; // don't ship the hash to the client
   res.status(statusCode).cookie("token", token, options).json({
     success: true,
     user,

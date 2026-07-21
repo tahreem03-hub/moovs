@@ -9,9 +9,9 @@ const {
   deleteInsurance,
   getInsuranceDropdown
 } = require('../controller/insuranceController');
-const { protect } = require('../middleware/auth');
+const { isAuthenticated } = require('../middleware/auth');
 
-//router.use(protect);
+router.use(isAuthenticated);
 
 router.post('/create', createInsurance);
 router.get('/list', getInsurances);
