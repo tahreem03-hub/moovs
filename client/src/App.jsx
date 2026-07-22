@@ -59,68 +59,71 @@ const App = () => {
         <Route path='/register' element={<Register />} />
         <Route path='/login' element={<Login />} />
         {/* is there anyother way for create form */}
-        <Route element={<Layout />}>
-          <Route path='/quotes' element={<Quotes />} />
-          <Route path="/quotes/create" element={<Quotes />} />
+        <Route element={<ProtectedRoute requiredRole="user" />}>
+          <Route element={<Layout />}>
+            <Route path='/quotes' element={<Quotes />} />
+            <Route path="/quotes/create" element={<Quotes />} />
 
-          <Route path='/reservations' element={<Reservations />} />
-          <Route path='/dispatch' element={<Dispatch />} />
-          <Route path='/driver-tracking' element={<DriverTracking />} />
+            <Route path='/reservations' element={<Reservations />} />
+            <Route path='/dispatch' element={<Dispatch />} />
+            <Route path='/driver-tracking' element={<DriverTracking />} />
 
-          <Route path='/vehicles' element={<Vehicles />} />
-          <Route path='/vehicles/create' element={<Vehicles />} />
-          <Route path='/vehicles/update/:id' element={<Vehicles />} />
-
-
-
-          <Route path='/contacts' element={<Contacts />} />
-          <Route path='/contacts/create' element={<Contacts />} />
-          <Route path='/contact/update/:id' element={<Contacts />} />
+            <Route path='/vehicles' element={<Vehicles />} />
+            <Route path='/vehicles/create' element={<Vehicles />} />
+            <Route path='/vehicles/update/:id' element={<Vehicles />} />
 
 
-          <Route path='/companies' element={<Companies />} />
-          <Route path='/companies/create' element={<Companies />} />
-          <Route path='/companies/update/:id' element={<Companies />} />
 
-          <Route path='/affiliates' element={<Affiliates />} />
-          <Route path='/affiliates/create' element={<Affiliates />} />
-
-          <Route path='/invoices' element={<Invoices />} />
-          <Route path='/payables' element={<Payables />} />
-          <Route path='/crm' element={<CRM />} />
-
-        </Route>
+            <Route path='/contacts' element={<Contacts />} />
+            <Route path='/contacts/create' element={<Contacts />} />
+            <Route path='/contact/update/:id' element={<Contacts />} />
 
 
-        <Route path="/settings" element={<Settings />}>
-          <Route index element={<General />} />  {/* /settings */}
-          <Route path="general" element={<General />} />  {/* /settings/general */}
+            <Route path='/companies' element={<Companies />} />
+            <Route path='/companies/create' element={<Companies />} />
+            <Route path='/companies/update/:id' element={<Companies />} />
 
+            <Route path='/affiliates' element={<Affiliates />} />
+            <Route path='/affiliates/create' element={<Affiliates />} />
 
-          <Route path="/settings/customer-portal" element={<CustomerPortal />} />
-          <Route path="/settings/customer-portal" element={<CustomerPortal />}>
-            <Route index element={<CustomerPortal />} />
+            <Route path='/invoices' element={<Invoices />} />
+            <Route path='/payables' element={<Payables />} />
+            <Route path='/crm' element={<CRM />} />
+
           </Route>
-          <Route path="cancellation" element={<Cancellation />} />
-          <Route path="insurance" element={<Insurance />} />
-          <Route path="terms" element={<Terms />} />
-          <Route path="drivers" element={<Drivers />} />
-          <Route path="members" element={<Members />} />
-          <Route path="zone-pricing" element={<ZonePricing />} />
 
-          <Route path="trip-rules" element={<TripRules />} />
-          <Route path="trip-rules/create" element={<TripRuleForm />} />
-          <Route path="trip-rules/edit/:id" element={<TripRuleForm />} />
 
-          <Route path="website" element={<Website />} />
-          <Route path="moovs-market" element={<MoovsMarket />} />
-          <Route path="billing" element={<Billing />} />
-          <Route path="academy" element={<Academy />} />
+          <Route path="/settings" element={<Settings />}>
+            <Route index element={<General />} />  {/* /settings */}
+            <Route path="general" element={<General />} />  {/* /settings/general */}
+
+
+            <Route path="/settings/customer-portal" element={<CustomerPortal />} />
+            <Route path="/settings/customer-portal" element={<CustomerPortal />}>
+              <Route index element={<CustomerPortal />} />
+            </Route>
+            <Route path="cancellation" element={<Cancellation />} />
+            <Route path="insurance" element={<Insurance />} />
+            <Route path="terms" element={<Terms />} />
+            <Route path="drivers" element={<Drivers />} />
+            <Route path="members" element={<Members />} />
+            <Route path="zone-pricing" element={<ZonePricing />} />
+
+            <Route path="trip-rules" element={<TripRules />} />
+            <Route path="trip-rules/create" element={<TripRuleForm />} />
+            <Route path="trip-rules/edit/:id" element={<TripRuleForm />} />
+
+            <Route path="website" element={<Website />} />
+            <Route path="moovs-market" element={<MoovsMarket />} />
+            <Route path="billing" element={<Billing />} />
+            <Route path="academy" element={<Academy />} />
+          </Route>
+
         </Route>
 
 
         <Route element={<ProtectedRoute requiredRole="admin" />}>
-          <Route element={<AdminLayout/>}>
+          <Route element={<AdminLayout />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/operators" element={<Operators />} />
             <Route path="/admin/operators/:id" element={<OperatorDetail />} />

@@ -66,7 +66,7 @@ const loginUser = async (req, res, next) => {
         }
 
        
-        sendToken(user, 200, res);
+        sendToken(user, 200, res, "Login Successfull");
        /* res.status(200).json({
             success: true,
             message: "Login successful",

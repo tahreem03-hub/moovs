@@ -1,5 +1,5 @@
 //create token and saving that in cookies
-const sendToken = (user, statusCode, res) => {
+const sendToken = (user, statusCode, res, message= "success") => {
   const token = user.getJwtToken();
 
   //Option for cookies
@@ -9,12 +9,13 @@ const sendToken = (user, statusCode, res) => {
     sameSite: process.env.NODE_ENV === "PRODUCTION" ? "none" : "lax",
     secure: process.env.NODE_ENV === "PRODUCTION",
   };
-user.password = undefined; // don't ship the hash to the client
+  user.password = undefined; // don't ship the hash to the client
   res.status(statusCode).cookie("token", token, options).json({
     success: true,
     user,
     token,
+    message,
   });
 };
 
-module.exports=sendToken;
+module.exports = sendToken;
