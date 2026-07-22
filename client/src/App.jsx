@@ -86,6 +86,12 @@ const App = () => {
             <Route path='/payables' element={<Payables />} />
             <Route path='/crm' element={<CRM />} />
 
+
+            <Route path="/quotes/:id" element={<Quotes />} />
+            <Route path="/quotes/edit/:id" element={<Quotes />} />
+
+
+
           </Route>
 
 

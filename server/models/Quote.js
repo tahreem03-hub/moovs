@@ -1,11 +1,10 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const commentSchema = require('./schemas/comment.schema')
-const addressSchema = require('./schemas/address.schema')
+const commentSchema = require('./schemas/comment.schema');
+const addressSchema = require('./schemas/address.schema');
 
 /* ---------- Sub-schemas ---------- */
 
-// A single stop (pick-up, drop-off, or intermediate stop)
 const stopSchema = new Schema(
   {
     type: {
@@ -13,22 +12,17 @@ const stopSchema = new Schema(
       enum: ['pickup', 'stop', 'dropoff'],
       required: true,
     },
-    // Toggle in UI: address pin vs airport
     locationType: {
       type: String,
       enum: ['address', 'airport'],
       default: 'address',
     },
-
-    // required true is missing in schema
     address: {
       type: addressSchema,
       required: function () {
         return this.locationType === "address";
       }
     },
-
-    // Airport-specific fields (only when locationType === 'airport')
     airport: {
       code: {
         type: String,
@@ -46,60 +40,63 @@ const stopSchema = new Schema(
       flightNumber: String,
       terminal: String,
     },
-    order: { type: Number, default: 0 }, // drag-and-drop ordering
+    duration: { type: Number, default: 0 }, // ✅ Added
+    arriveBy: { type: Boolean, default: false }, // ✅ Added
+    order: { type: Number, default: 0 },
     notes: String,
   },
   { _id: true }
 );
 
-// A pricing line item ("Add Pricing" lets you add multiple)
 const pricingItemSchema = new Schema(
   {
     label: { type: String, default: 'Base Rate', trim: true },
-    // Toggle in UI: flat (per trip / location-based) vs hourly
     rateType: {
       type: String,
       enum: ['flat', 'hourly'],
       default: 'flat',
     },
-    amount: { type: Number, required: true, min: 0 }, // "Enter Amount"
-    hours: { type: Number, min: 0 },                  // used when rateType === 'hourly'
-    // Whether BRA (Base Rate Automation) calculated this
+    amount: { type: Number, required: true, min: 0 },
+    hours: { type: Number, min: 0 },
     isAutoCalculated: { type: Boolean, default: false },
     taxable: { type: Boolean, default: false },
+    description: { type: String, trim: true }, // ✅ Added
   },
   { _id: true }
 );
-
 
 /* ---------- Main Quote schema ---------- */
 
 const quoteSchema = new Schema(
   {
-    // Human-friendly quote number, e.g. Q-2026-00042
+    // ============ TENANT ISOLATION ============
+    operatorId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true
+    },
+
+    // ============ QUOTE NUMBER ============
     quoteNumber: { type: String, unique: true, index: true },
 
-    /* ORDER DETAILS */
+    // ============ ORDER DETAILS ============
     bookingContact: {
       type: Schema.Types.ObjectId,
       ref: 'Contact',
-      required: true,
-      // check if it is really required???
+      default: null,  // ✅ Not required at schema level
     },
     orderType: {
       type: String,
       required: true,
-      // adjust actual order types
-      enum: ['retail', 'corporate', 'affiliate', 'charter'],
     },
     assignedMember: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-      // check if it is really required???
+      default: null,  // ✅ Not required at schema level
     },
 
-    /* TRIP TYPE */
+    // ============ TRIP TYPE ============
     tripType: {
       type: String,
       enum: ['hourly', 'one_way', 'round_trip'],
@@ -107,24 +104,23 @@ const quoteSchema = new Schema(
       required: true,
     },
 
-    /* TRIP DETAILS */
+    // ============ TRIP DETAILS ============
     passenger: {
       type: Schema.Types.ObjectId,
       ref: 'Contact',
-      default: null, //No passenger
+      default: null,
     },
 
-    /* DATE & TIME */
+    // ============ DATE & TIME ============
     pickupDateTime: { type: Date, required: true },
     dropoffDateTime: {
       type: Date,
-      // required for hourly/round trip; optional for one-way
       required: function () {
         return this.tripType !== 'one_way';
       },
     },
 
-    /* STOPS: pickup, dropoff — one array, ordered */
+    // ============ STOPS ============
     stops: {
       type: [stopSchema],
       validate: {
@@ -138,44 +134,34 @@ const quoteSchema = new Schema(
       },
     },
 
-    /* ADDITIONAL INFO */
+    // ============ ADDITIONAL INFO ============
     passengerCount: { type: Number, min: 0, default: null },
     driverNote: { type: String, trim: true },
     tripNotes: { type: String, trim: true },
 
-    /* VEHICLE(S) */
-    /*
-    vehicles: [
-      {
-        vehicleType: { type: Schema.Types.ObjectId, ref: 'VehicleType' },
-        vehicle: { type: Schema.Types.ObjectId, ref: 'Vehicle' }, // specific unit, optional at quote stage
-        quantity: { type: Number, default: 1, min: 1 },
-      },
-    ],
-    */
-
+    // ============ VEHICLE ============
     vehicle: {
       type: Schema.Types.ObjectId,
       ref: 'Vehicle',
       required: true
     },
 
-    /* PRICING */
+    // ============ PRICING ============
     pricing: {
       items: [pricingItemSchema],
       subtotal: { type: Number, default: 0, min: 0 },
-      taxRate: { type: Number, default: 0, min: 0 },   // percent
+      taxRate: { type: Number, default: 0, min: 0 },
       taxAmount: { type: Number, default: 0, min: 0 },
       discount: { type: Number, default: 0, min: 0 },
       gratuity: { type: Number, default: 0, min: 0 },
-      total: { type: Number, default: 0, min: 0 },     // "Total $0.00"
+      total: { type: Number, default: 0, min: 0 },
       currency: { type: String, default: 'USD' },
     },
 
-    /* INTERNAL COMMENTS */
+    // ============ INTERNAL COMMENTS ============
     internalComments: [commentSchema],
 
-    /* STATUS / WORKFLOW (Save quote dropdown: save, save & send, etc.) */
+    // ============ STATUS ============
     status: {
       type: String,
       enum: ['new', 'sent', 'draft', 'archived'],
@@ -183,46 +169,57 @@ const quoteSchema = new Schema(
       index: true,
     },
 
-    /*
-    sentAt: Date,
-    expiresAt: Date,
-    convertedToReservation: {
-      type: Schema.Types.ObjectId,
-      ref: 'Reservation',
-      default: null,
+    // ============ ACTIVE / SOFT DELETE ============
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true
     },
-    */
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
 
-    /* Audit */
-    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
-    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
-    isDeleted: { type: Boolean, default: false }, // soft delete
+    // ============ AUDIT ============
+    createdBy: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'User',
+      required: true,
+      index: true
+    },
+    updatedBy: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'User' 
+    },
   },
-  { timestamps: true } // adds createdAt / updatedAt
+  { timestamps: true }
 );
 
 /* ---------- Hooks & helpers ---------- */
 
-// Auto-generate quote number can change to sequestional count later
 quoteSchema.pre("save", function (next) {
+  // Set operatorId if not set
+  if (this.isNew && !this.operatorId && this.createdBy) {
+    this.operatorId = this.createdBy;
+  }
+
   if (this.isNew && !this.quoteNumber) {
     const year = new Date().getFullYear();
     const random = Math.floor(10000 + Math.random() * 90000);
-
     this.quoteNumber = `Q-${year}-${random}`;
   }
 
-  next();
+  //next();
 });
 
-// Recalculate totals whenever pricing items change
+// Recalculate totals
 quoteSchema.pre('save', function (next) {
   if (this.isModified('pricing')) {
     const subtotal = (this.pricing.items || []).reduce((sum, item) => {
-      const line =
-        item.rateType === 'hourly'
-          ? item.amount * (item.hours || 0)
-          : item.amount;
+      const line = item.rateType === 'hourly'
+        ? item.amount * (item.hours || 0)
+        : item.amount;
       return sum + line;
     }, 0);
 
@@ -235,12 +232,14 @@ quoteSchema.pre('save', function (next) {
       (this.pricing.discount || 0)
     ).toFixed(2);
   }
-  next();
+  //next();
 });
 
-/* Useful indexes */
+/* ---------- Indexes ---------- */
 quoteSchema.index({ bookingContact: 1, createdAt: -1 });
 quoteSchema.index({ assignedMember: 1, status: 1 });
 quoteSchema.index({ pickupDateTime: 1 });
+quoteSchema.index({ operatorId: 1, isDeleted: 1 });
+quoteSchema.index({ operatorId: 1, status: 1 });
 
 module.exports = mongoose.model('Quote', quoteSchema);

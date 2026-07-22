@@ -1,3 +1,4 @@
+// src/modules/customer-portal/components/SettingsTab.jsx
 import React, { useState, useEffect } from 'react';
 import { Save, Lock, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
 import axios from 'axios';
@@ -90,29 +91,33 @@ const SettingsTab = () => {
     try {
       setLoading(true);
       const { data } = await axios.get(
-        `${import.meta.env.VITE_URL}/customer-portal`
+        `${import.meta.env.VITE_URL}/company-profile/customer-portal/settings`,
+        { withCredentials: true }
       );
-      if (data.data?.settings) {
-        setSettings(prev => ({ ...prev, ...data.data.settings }));
-        // Show gratuity details if enabled
-        if (data.data.settings.gratuity?.enabled) {
+      if (data.data) {
+        setSettings(prev => ({ ...prev, ...data.data }));
+        if (data.data.gratuity?.enabled) {
           setShowGratuityDetails(true);
         }
       }
     } catch (error) {
+      console.error('Failed to load settings:', error);
       toast.error('Failed to load settings');
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ FIXED: Fetch vehicles from the correct endpoint
   const fetchVehicles = async () => {
     try {
       const { data } = await axios.get(
-        `${import.meta.env.VITE_URL}/customer-portal/vehicles`
+        `${import.meta.env.VITE_URL}/vehicle/my-vehicles`,
+        { withCredentials: true }
       );
       if (data.success) {
-        setVehicles(data.data || []);
+        setVehicles(data.vehicles || []);
+        console.log('✅ Fetched vehicles:', data.vehicles);
       }
     } catch (error) {
       console.error('Failed to fetch vehicles:', error);
@@ -128,7 +133,6 @@ const SettingsTab = () => {
       }
     }));
 
-    // Show gratuity details when enabled
     if (section === 'gratuity' && key === 'enabled') {
       setShowGratuityDetails(!settings.gratuity.enabled);
     }
@@ -179,17 +183,12 @@ const SettingsTab = () => {
   const handleSave = async (e) => {
     e.preventDefault();
 
-    // Validate customer signature requires terms
-    if (settings.customerSignature.enabled) {
-      // Check if there are terms available (backend will validate)
-      // Frontend check - we'll let backend handle the error
-    }
-
     setSaving(true);
     try {
       await axios.put(
-        `${import.meta.env.VITE_URL}/customer-portal/settings`,
-        settings
+        `${import.meta.env.VITE_URL}/company-profile/customer-portal/settings`,
+        settings,
+        { withCredentials: true }
       );
       toast.success('Settings saved!');
     } catch (error) {
@@ -248,7 +247,6 @@ const SettingsTab = () => {
 
           {settings.gratuity.enabled && (
             <div className="p-4 space-y-4">
-              {/* Gratuity Percentages */}
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-2">Gratuity Options</p>
                 <div className="flex gap-3">
@@ -269,7 +267,6 @@ const SettingsTab = () => {
                 </div>
               </div>
 
-              {/* Cash Option */}
               <div className="flex items-center justify-between py-2 border-b border-gray-100">
                 <span className="text-sm text-gray-700">Offer cash gratuity option</span>
                 <button
@@ -281,7 +278,6 @@ const SettingsTab = () => {
                 </button>
               </div>
 
-              {/* Custom Option */}
               <div className="flex items-center justify-between py-2 border-b border-gray-100">
                 <span className="text-sm text-gray-700">Offer custom gratuity option</span>
                 <button
@@ -449,18 +445,28 @@ const SettingsTab = () => {
 
           {settings.skipVehicleSelection.enabled && (
             <div className="p-4 border-t border-gray-200">
+              <FieldLabel>Select Default Vehicle</FieldLabel>
               <select
                 value={settings.skipVehicleSelection.defaultVehicleId || ''}
                 onChange={(e) => handleChange('skipVehicleSelection', 'defaultVehicleId', e.target.value)}
-                className={`${inputCls} w-full`}
+                className={`${inputCls} bg-white w-full`}
               >
                 <option value="">Select default vehicle</option>
-                {vehicles.map((vehicle) => (
-                  <option key={vehicle._id} value={vehicle._id}>
-                    {vehicle.name} ({vehicle.type})
-                  </option>
-                ))}
+                {vehicles.length === 0 ? (
+                  <option value="" disabled>No vehicles available</option>
+                ) : (
+                  vehicles.map((vehicle) => (
+                    <option key={vehicle._id} value={vehicle._id}>
+                      {vehicle.name} ({vehicle.type}) - {vehicle.passengerCapacity} seats
+                    </option>
+                  ))
+                )}
               </select>
+              {vehicles.length === 0 && (
+                <p className="text-xs text-gray-400 mt-1">
+                  No vehicles found. Please add a vehicle first.
+                </p>
+              )}
             </div>
           )}
         </div>
