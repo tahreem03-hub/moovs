@@ -24,7 +24,7 @@ const buildLogo = (file) => {
 // ============ GET PROFILE ============
 const getCompanyProfile = async (req, res) => {
   try {
-    const profile = await CompanyProfile.getCompanyProfile();
+    const profile = await CompanyProfile.getCompanyProfile(req.user._id);
     return res.status(200).json({ success: true, data: profile });
   } catch (error) {
     console.error('Get profile error:', error);
@@ -36,17 +36,27 @@ const getCompanyProfile = async (req, res) => {
 const updateCompanyProfile = async (req, res) => {
   try {
     const { name, phone, email, website, address, permitNumber, generalEmail, bookingEmail } = req.body;
-    let profile = await CompanyProfile.getCompanyProfile();
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+
+    if (!profile) {
+      // Create profile if it doesn't exist
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: name || 'My Transportation Company',
+        email: email || 'info@mycompany.com',
+        phone: phone || '+1 234 567 8900'
+      });
+    }
 
     if (req.file) {
       if (profile.logo?.filename) deleteLogoFile(profile.logo.filename);
       profile.logo = buildLogo(req.file);
     }
 
-    if (name) profile.name = name;
-    if (phone) profile.phone = phone;
-    if (email) profile.email = email;
-    if (website) profile.website = website;
+    if (name !== undefined) profile.name = name;
+    if (phone !== undefined) profile.phone = phone;
+    if (email !== undefined) profile.email = email;
+    if (website !== undefined) profile.website = website;
     if (address) {
       if (address.street !== undefined) profile.address.street = address.street;
       if (address.city !== undefined) profile.address.city = address.city;
@@ -70,7 +80,13 @@ const updateCompanyProfile = async (req, res) => {
 // ============ COMMUNICATION TAB ============
 const getCommunicationSettings = async (req, res) => {
   try {
-    const profile = await CompanyProfile.getCompanyProfile();
+    const profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Profile not found' 
+      });
+    }
     return res.status(200).json({ 
       success: true, 
       data: profile.communication || {} 
@@ -94,7 +110,16 @@ const updateCommunicationSettings = async (req, res) => {
       smtp
     } = req.body;
 
-    const profile = await CompanyProfile.getCompanyProfile();
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
     
     // Update toggles
     if (sendAutomatedChargeEmails !== undefined) {
@@ -140,7 +165,16 @@ const updateCommunicationSettings = async (req, res) => {
 const verifyDomain = async (req, res) => {
   try {
     const { domain, email } = req.body;
-    const profile = await CompanyProfile.getCompanyProfile();
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
     
     if (!domain) {
       return res.status(400).json({
@@ -171,16 +205,12 @@ const verifyDomain = async (req, res) => {
       }
     ];
 
-    // In production, you would actually check if DNS records exist
-    // For now, we'll just save the domain as "verified" when user clicks verify
-    // This is a simplified approach - actual verification would check DNS
-    
     // Save domain info
     if (email) {
       profile.communication.domainEmail = email;
     }
     profile.communication.customDomain = domain;
-    profile.communication.domainVerified = true; // Simplified - mark as verified
+    profile.communication.domainVerified = true;
     
     await profile.save();
 
@@ -206,7 +236,14 @@ const verifyDomain = async (req, res) => {
 const testEmailConfig = async (req, res) => {
   try {
     const { email } = req.body;
-    const profile = await CompanyProfile.getCompanyProfile();
+    const profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profile not found'
+      });
+    }
     
     const smtpSettings = profile.communication.smtp || {};
     const fromEmail = profile.communication.domainEmail || profile.email || 'noreply@example.com';
@@ -220,23 +257,6 @@ const testEmailConfig = async (req, res) => {
     }
 
     // In production, you would use nodemailer to actually send the email
-    // const nodemailer = require('nodemailer');
-    // const transporter = nodemailer.createTransport({
-    //   host: smtpSettings.host,
-    //   port: smtpSettings.port,
-    //   secure: smtpSettings.secure,
-    //   auth: {
-    //     user: smtpSettings.username,
-    //     pass: smtpSettings.password
-    //   }
-    // });
-    // await transporter.sendMail({
-    //   from: fromEmail,
-    //   to: email || fromEmail,
-    //   subject: 'Test Email from Moovs',
-    //   text: 'This is a test email to confirm your email configuration is working!'
-    // });
-    
     // For now, simulate success
     return res.status(200).json({
       success: true,
@@ -254,7 +274,13 @@ const testEmailConfig = async (req, res) => {
 // ============ PAYMENTS TAB ============
 const getPaymentSettings = async (req, res) => {
   try {
-    const profile = await CompanyProfile.getCompanyProfile();
+    const profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Profile not found' 
+      });
+    }
     return res.status(200).json({ success: true, data: profile.payments || {} });
   } catch (error) {
     console.error('Get payments error:', error);
@@ -264,7 +290,17 @@ const getPaymentSettings = async (req, res) => {
 
 const updatePaymentSettings = async (req, res) => {
   try {
-    const profile = await CompanyProfile.getCompanyProfile();
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
+    
     profile.payments = { ...profile.payments, ...req.body };
     await profile.save();
     return res.status(200).json({ success: true, message: 'Payment settings updated', data: profile.payments });
@@ -274,11 +310,16 @@ const updatePaymentSettings = async (req, res) => {
   }
 };
 
-
 // ============ PREFERENCES TAB ============
 const getPreferenceSettings = async (req, res) => {
   try {
-    const profile = await CompanyProfile.getCompanyProfile();
+    const profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Profile not found' 
+      });
+    }
     return res.status(200).json({ 
       success: true, 
       data: profile.preferences || {} 
@@ -301,7 +342,16 @@ const updatePreferenceSettings = async (req, res) => {
       orderTypes
     } = req.body;
 
-    const profile = await CompanyProfile.getCompanyProfile();
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
 
     // Update Pricing Layout
     if (pricingLayout) {
@@ -345,6 +395,252 @@ const updatePreferenceSettings = async (req, res) => {
   }
 };
 
+// ============ CUSTOMER PORTAL PAYMENTS TAB ============
+const getCustomerPortalPayments = async (req, res) => {
+  try {
+    const profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Profile not found' 
+      });
+    }
+    return res.status(200).json({ 
+      success: true, 
+      data: profile.customerPortal?.payments || {} 
+    });
+  } catch (error) {
+    console.error('Get customer portal payments error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch customer portal payments' 
+    });
+  }
+};
+
+const updateCustomerPortalPayments = async (req, res) => {
+  try {
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
+    
+    if (!profile.customerPortal) profile.customerPortal = {};
+    profile.customerPortal.payments = { 
+      ...profile.customerPortal.payments, 
+      ...req.body 
+    };
+    
+    await profile.save();
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Customer portal payments updated', 
+      data: profile.customerPortal.payments 
+    });
+  } catch (error) {
+    console.error('Update customer portal payments error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update' 
+    });
+  }
+};
+
+// ============ CUSTOMER PORTAL SETTINGS TAB ============
+const getCustomerPortalSettings = async (req, res) => {
+  try {
+    const profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Profile not found' 
+      });
+    }
+    return res.status(200).json({ 
+      success: true, 
+      data: profile.customerPortal?.settings || {} 
+    });
+  } catch (error) {
+    console.error('Get customer portal settings error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch customer portal settings' 
+    });
+  }
+};
+
+const updateCustomerPortalSettings = async (req, res) => {
+  try {
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
+    
+    if (!profile.customerPortal) profile.customerPortal = {};
+    profile.customerPortal.settings = { 
+      ...profile.customerPortal.settings, 
+      ...req.body 
+    };
+    
+    await profile.save();
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Customer portal settings updated', 
+      data: profile.customerPortal.settings 
+    });
+  } catch (error) {
+    console.error('Update customer portal settings error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update' 
+    });
+  }
+};
+
+// ============ CUSTOMER PORTAL BRANDING TAB ============
+const getCustomerPortalBranding = async (req, res) => {
+  try {
+    const profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Profile not found' 
+      });
+    }
+    return res.status(200).json({ 
+      success: true, 
+      data: profile.customerPortal?.branding || {} 
+    });
+  } catch (error) {
+    console.error('Get customer portal branding error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch customer portal branding' 
+    });
+  }
+};
+
+const updateCustomerPortalBranding = async (req, res) => {
+  try {
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
+    
+    if (!profile.customerPortal) profile.customerPortal = {};
+    
+    // Handle logo upload
+    if (req.file) {
+      if (profile.customerPortal.branding?.logo?.filename) {
+        deleteLogoFile(profile.customerPortal.branding.logo.filename);
+      }
+      profile.customerPortal.branding = {
+        ...profile.customerPortal.branding,
+        logo: {
+          url: `/uploads/company/${req.file.filename}`,
+          filename: req.file.filename
+        }
+      };
+    }
+    
+    // Update other branding fields
+    const { primaryColor, secondaryColor, accentColor, fontFamily, buttonStyle } = req.body;
+    if (primaryColor) profile.customerPortal.branding.primaryColor = primaryColor;
+    if (secondaryColor) profile.customerPortal.branding.secondaryColor = secondaryColor;
+    if (accentColor) profile.customerPortal.branding.accentColor = accentColor;
+    if (fontFamily) profile.customerPortal.branding.fontFamily = fontFamily;
+    if (buttonStyle) profile.customerPortal.branding.buttonStyle = buttonStyle;
+    
+    await profile.save();
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Customer portal branding updated', 
+      data: profile.customerPortal.branding 
+    });
+  } catch (error) {
+    if (req.file) deleteLogoFile(req.file.filename);
+    console.error('Update customer portal branding error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update' 
+    });
+  }
+};
+
+// ============ CUSTOMER PORTAL PROMO CODES TAB ============
+const getCustomerPortalPromoCodes = async (req, res) => {
+  try {
+    const profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Profile not found' 
+      });
+    }
+    return res.status(200).json({ 
+      success: true, 
+      data: profile.customerPortal?.promoCode || {} 
+    });
+  } catch (error) {
+    console.error('Get customer portal promo codes error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch promo codes' 
+    });
+  }
+};
+
+const updateCustomerPortalPromoCodes = async (req, res) => {
+  try {
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
+    
+    if (!profile.customerPortal) profile.customerPortal = {};
+    profile.customerPortal.promoCode = { 
+      ...profile.customerPortal.promoCode, 
+      ...req.body 
+    };
+    
+    await profile.save();
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Promo codes updated', 
+      data: profile.customerPortal.promoCode 
+    });
+  } catch (error) {
+    console.error('Update promo codes error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update' 
+    });
+  }
+};
 
 module.exports = {
   getCompanyProfile,
@@ -356,5 +652,13 @@ module.exports = {
   getPaymentSettings,
   updatePaymentSettings,
   getPreferenceSettings,
-  updatePreferenceSettings
+  updatePreferenceSettings,
+  getCustomerPortalPayments,
+  updateCustomerPortalPayments,
+  getCustomerPortalSettings,
+  updateCustomerPortalSettings,
+  getCustomerPortalBranding,
+  updateCustomerPortalBranding,
+  getCustomerPortalPromoCodes,
+  updateCustomerPortalPromoCodes
 };

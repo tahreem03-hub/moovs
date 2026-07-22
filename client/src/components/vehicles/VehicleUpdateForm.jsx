@@ -187,7 +187,10 @@ const VehicleUpdateForm = ({ onVehicleUpdated }) => {
       setSubmitting(true);
       const response = await axios.put(
         `${import.meta.env.VITE_URL}/vehicle/update/${id}`,
-        form
+        form,
+        {
+          withCredentials: true,
+        }
       );
       toast.success(response.data.message || 'Vehicle updated successfully!');
       if (onVehicleUpdated) {

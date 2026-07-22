@@ -38,18 +38,14 @@ import TripRuleForm from './components/settings/TripRuleForm';
 
 import ProtectedRoute from './shared/ProtectedRoute';
 import AdminLayout from './modules/admin/layout/AdminLayout';
-import AdminDashboard from './modules/admin/pages/AdminDashboard';
-import Operators from './modules/admin/pages/Operators';
-import OperatorDetail from './modules/admin/pages/OperatorDetail';
+import { AdminDashboard, Operators, OperatorDetail } from './modules/admin';
+import Plans from './modules/admin/pages/Plans';
 import Subscriptions from './modules/admin/pages/Subscriptions';
 
 
 
 
 const App = () => {
-
-
-
 
   return (
     <>
@@ -126,8 +122,11 @@ const App = () => {
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/operators" element={<Operators />} />
+            <Route path="/admin/plans" element={<Plans />} />
+            <Route path="/admin/operators/create" element={<Operators />} />
+            <Route path='/admin/subscriptions' element={<Subscriptions/>}/>
             <Route path="/admin/operators/:id" element={<OperatorDetail />} />
-            <Route path="/admin/subscriptions" element={<Subscriptions />} />
+            <Route path="/admin/operators/:id/edit" element={<Operators />} />
           </Route>
         </Route>
 

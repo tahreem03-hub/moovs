@@ -1,272 +1,260 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import {
-  ChevronLeft, Loader2, Power, Trash2, Mail, Phone, CalendarDays,
-  Building2, Car, Save,
-} from 'lucide-react';
+// src/modules/admin/pages/OperatorDetail.jsx
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Building2, Car, Users, Mail, Phone, Calendar, Edit2, Power, Trash2 } from 'lucide-react';
+import adminService, { getErrorMessage } from '../services/adminService';
 import toast from 'react-hot-toast';
-import { adminService, getErrorMessage } from '../services/adminService';
-
-const PLANS = ['free', 'basic', 'pro', 'enterprise'];
-const STATUSES = ['active', 'inactive', 'trial', 'expired'];
-
-const fmtDate = (d) =>
-  d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-
-const initials = (op) => `${op?.Fname?.[0] || ''}${op?.Lname?.[0] || ''}` || '?';
 
 const OperatorDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-
+  const [loading, setLoading] = useState(true);
   const [operator, setOperator] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [vehicles, setVehicles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [busy, setBusy] = useState(false);
 
-  // editable subscription fields
-  const [plan, setPlan] = useState('free');
-  const [status, setStatus] = useState('trial');
+  useEffect(() => {
+    fetchOperatorDetails();
+  }, [id]);
 
-  const load = async () => {
+  const fetchOperatorDetails = async () => {
     try {
       setLoading(true);
-      const [opRes, compRes, vehRes] = await Promise.all([
+      const [opRes, companiesRes, vehiclesRes] = await Promise.all([
         adminService.getOperatorById(id),
         adminService.getOperatorCompanies(id),
-        adminService.getOperatorVehicles(id),
+        adminService.getOperatorVehicles(id)
       ]);
-      const op = opRes.data?.data || opRes.data;
-      setOperator(op);
-      setPlan(op.subscriptionPlan || 'free');
-      setStatus(op.subscriptionStatus || 'trial');
-      setCompanies(compRes.data?.data || []);
-      setVehicles(vehRes.data?.data || []);
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to load operator'));
+
+      setOperator(opRes.data.data);
+      setCompanies(companiesRes.data.data || []);
+      setVehicles(vehiclesRes.data.data || []);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  const saveSubscription = async () => {
+  const handleToggle = async () => {
     try {
-      setSaving(true);
-      const res = await adminService.updateOperator(id, { subscriptionPlan: plan, subscriptionStatus: status });
-      setOperator(res.data?.data || { ...operator, subscriptionPlan: plan, subscriptionStatus: status });
-      toast.success('Subscription updated');
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to update subscription'));
-    } finally {
-      setSaving(false);
+      const response = await adminService.toggleOperatorStatus(id);
+      toast.success(response.data.message);
+      fetchOperatorDetails();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     }
   };
 
-  const toggleStatus = async () => {
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this operator?')) return;
+    
     try {
-      setBusy(true);
-      await adminService.toggleOperatorStatus(id);
-      setOperator((prev) => ({ ...prev, isActive: !prev.isActive }));
-      toast.success(operator.isActive ? 'Operator deactivated' : 'Operator activated');
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to update status'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const remove = async () => {
-    const ok = window.confirm(
-      `Delete ${operator.CompanyName || operator.email}? All of their companies, vehicles, and contacts will be permanently removed.`
-    );
-    if (!ok) return;
-    try {
-      setBusy(true);
-      await adminService.deleteOperator(id);
-      toast.success('Operator deleted');
+      const response = await adminService.deleteOperator(id);
+      toast.success(response.data.message);
       navigate('/admin/operators');
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to delete operator'));
-      setBusy(false);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="w-7 h-7 text-blue-600 animate-spin" />
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   if (!operator) {
     return (
-      <div className="py-24 text-center">
-        <p className="text-sm font-medium text-gray-900">Operator not found</p>
-        <button onClick={() => navigate('/admin/operators')} className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700">
-          Back to operators
+      <div className="p-6 text-center text-gray-500">
+        <p>Operator not found</p>
+        <button
+          onClick={() => navigate('/admin/operators')}
+          className="mt-4 text-blue-600 hover:underline"
+        >
+          Back to Operators
         </button>
       </div>
     );
   }
 
-  const tiles = [
-    { icon: Building2, label: 'Companies', value: companies.length, tint: 'bg-purple-100 text-purple-600' },
-    { icon: Car, label: 'Vehicles', value: vehicles.length, tint: 'bg-orange-100 text-orange-600' },
-  ];
-
   return (
-    <>
-      <button
-        onClick={() => navigate('/admin/operators')}
-        className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900 mb-6"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        Back to operators
-      </button>
-
-      {/* Profile */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-blue-600 text-white text-lg font-bold flex items-center justify-center">
-              {initials(operator)}
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                {[operator.Fname, operator.Lname].filter(Boolean).join(' ') || '—'}
-              </h1>
-              <p className="text-gray-500">{operator.CompanyName || '—'}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleStatus}
-              disabled={busy}
-              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 ${
-                operator.isActive
-                  ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
-                  : 'bg-green-50 text-green-700 hover:bg-green-100'
-              }`}
-            >
-              <Power className="w-4 h-4" />
-              {operator.isActive ? 'Deactivate' : 'Activate'}
-            </button>
-            <button
-              onClick={remove}
-              disabled={busy}
-              className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete
-            </button>
-          </div>
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-x-8 gap-y-3 mt-6 text-sm">
-          <Row icon={Mail} label="Email" value={operator.email} />
-          <Row icon={Phone} label="Phone" value={operator.phone || '—'} />
-          <Row icon={CalendarDays} label="Joined" value={fmtDate(operator.createdAt)} />
-          <Row
-            icon={Power}
-            label="Status"
-            value={operator.isActive ? 'Active' : 'Inactive'}
-          />
-        </div>
-      </div>
-
-      {/* Subscription editor */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Subscription</h2>
-        <div className="flex flex-wrap items-end gap-4">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-gray-500">Plan</span>
-            <select
-              value={plan}
-              onChange={(e) => setPlan(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 capitalize"
-            >
-              {PLANS.map((p) => <option key={p} value={p} className="capitalize">{p}</option>)}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-gray-500">Status</span>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 capitalize"
-            >
-              {STATUSES.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
-            </select>
-          </label>
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
           <button
-            onClick={saveSubscription}
-            disabled={saving || (plan === operator.subscriptionPlan && status === operator.subscriptionStatus)}
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => navigate('/admin/operators')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save changes
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {operator.CompanyName}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {operator.Fname} {operator.Lname}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleToggle}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              operator.isActive
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <Power className="w-4 h-4 inline mr-1" />
+            {operator.isActive ? 'Active' : 'Inactive'}
+          </button>
+          <button
+            onClick={() => navigate(`/admin/operators/${id}/edit`)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1"
+          >
+            <Edit2 className="w-4 h-4" />
+            Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors flex items-center gap-1"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
           </button>
         </div>
       </div>
 
-      {/* Stat tiles */}
-      <div className="grid grid-cols-2 gap-4 mt-6">
-        {tiles.map(({ icon: Icon, label, value, tint }) => (
-          <div key={label} className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
-            <div className={`h-10 w-10 rounded-lg flex items-center justify-center mb-3 ${tint}`}>
-              <Icon className="w-5 h-5" />
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <Building2 className="w-5 h-5 text-blue-600" />
             </div>
-            <p className="text-2xl font-semibold text-gray-900">{value}</p>
-            <p className="text-sm text-gray-500">{label}</p>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{companies.length}</p>
+              <p className="text-sm text-gray-500">Companies</p>
+            </div>
           </div>
-        ))}
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-green-50 rounded-lg">
+              <Car className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{vehicles.length}</p>
+              <p className="text-sm text-gray-500">Vehicles</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-purple-50 rounded-lg">
+              <Users className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{operator.stats?.contacts || 0}</p>
+              <p className="text-sm text-gray-500">Contacts</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Companies + Vehicles lists */}
-      <div className="grid lg:grid-cols-2 gap-6 mt-6">
-        <ListCard title="Companies" empty="No companies yet" items={companies} render={(c) => c.name || c.companyName || c._id} />
-        <ListCard
-          title="Vehicles"
-          empty="No vehicles yet"
-          items={vehicles}
-          render={(v) => v.name || [v.make, v.model].filter(Boolean).join(' ') || v._id}
-        />
+      {/* Company Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Details */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Details</h2>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs text-gray-500 uppercase">Email</p>
+              <p className="text-sm text-gray-900">{operator.email}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase">Phone</p>
+              <p className="text-sm text-gray-900">{operator.phone || 'Not provided'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase">Subscription</p>
+              <p className="text-sm text-gray-900">
+                <span className="capitalize">{operator.subscriptionPlan}</span>
+                {' • '}
+                <span className={`capitalize ${
+                  operator.subscriptionStatus === 'active' ? 'text-green-600' :
+                  operator.subscriptionStatus === 'trial' ? 'text-blue-600' :
+                  'text-red-600'
+                }`}>
+                  {operator.subscriptionStatus}
+                </span>
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase">Joined</p>
+              <p className="text-sm text-gray-900">
+                {new Date(operator.createdAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase">Created By</p>
+              <p className="text-sm text-gray-900">
+                {operator.createdBy ? 'Admin' : 'Self-Registered'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Companies */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Companies</h2>
+          {companies.length === 0 ? (
+            <p className="text-sm text-gray-500">No companies yet</p>
+          ) : (
+            <div className="space-y-2">
+              {companies.map((company) => (
+                <div key={company._id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{company.name}</p>
+                    <p className="text-xs text-gray-500">{company.email}</p>
+                  </div>
+                  <span className="text-xs text-gray-400">
+                    {new Date(company.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </>
+
+      {/* Vehicles */}
+      <div className="mt-6 bg-white rounded-lg border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Vehicles</h2>
+        {vehicles.length === 0 ? (
+          <p className="text-sm text-gray-500">No vehicles yet</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {vehicles.map((vehicle) => (
+              <div key={vehicle._id} className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50">
+                <p className="font-medium text-gray-900">{vehicle.name}</p>
+                <p className="text-sm text-gray-500">{vehicle.type}</p>
+                <p className="text-xs text-gray-400">{vehicle.passengerCapacity} seats</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
-
-const Row = ({ icon: Icon, label, value }) => (
-  <div className="flex items-center gap-3">
-    <Icon className="h-4 w-4 text-gray-400" />
-    <span className="text-gray-500 w-16">{label}</span>
-    <span className="text-gray-900 font-medium truncate">{value}</span>
-  </div>
-);
-
-const ListCard = ({ title, items, empty, render }) => (
-  <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-    <div className="px-5 py-3 border-b border-gray-100">
-      <h3 className="font-semibold text-gray-900">{title}</h3>
-    </div>
-    {items.length === 0 ? (
-      <p className="px-5 py-8 text-center text-sm text-gray-400">{empty}</p>
-    ) : (
-      <ul className="divide-y divide-gray-100">
-        {items.map((item) => (
-          <li key={item._id} className="px-5 py-3 text-sm text-gray-700">{render(item)}</li>
-        ))}
-      </ul>
-    )}
-  </div>
-);
 
 export default OperatorDetail;

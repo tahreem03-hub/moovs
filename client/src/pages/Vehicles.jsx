@@ -40,7 +40,11 @@ const Vehicles = () => {
 
   const getAllVehicles = async () => {
     try {
-      const { data } = await axios.get(`${import.meta.env.VITE_URL}/vehicle/my-vehicles`);
+      const { data } = await axios.get(`${import.meta.env.VITE_URL}/vehicle/my-vehicles`,
+        {
+          withCredentials: true,
+        }
+      );
       if (data.success) {
         setVehicles(data.vehicles);
       } else {

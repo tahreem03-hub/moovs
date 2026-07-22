@@ -6,14 +6,15 @@ const cors = require('cors')
 const errorHandler = require('./middleware/error')
 
 // Import modular admin routes
-const { adminRoutes } = require('./modules/admin');
+const { adminRoutes, subscriptionRoutes } = require('./modules/admin');
+
 
 // CORS HERE - BEFORE ANY ROUTES
 app.use(cors({
   origin: 'http://localhost:5173', // Your frontend URL
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
 
 // Then body parsers
@@ -45,13 +46,14 @@ app.use('/driver', require('./routes/driverRoutes'));
 app.use('/member', require('./routes/memberRoutes'));
 app.use('/company-profile', require('./routes/conpanyProfileRoutes'));
 app.use('/trip-rules', require('./routes/tripRuleRoutes'));
-// Add this with your other routes
+
 app.use('/customer-portal', require('./routes/customerPortalRoutes'))
 
 
 
 // Use routes
 app.use('/admin', adminRoutes);
+app.use('/admin/subscriptions', subscriptionRoutes);
 
 
 app.use(errorHandler);

@@ -8,11 +8,7 @@ const childSeatSchema = new Schema({
     description: { type: String, trim: true }
 }, { _id: false })
 
-
 const featureSchema = new Schema({
-
-    /* using enum here is the right call — it protects your data even if 
-    someone bypasses the frontend (Postman, a bug, another client app later). */
     general: {
         type: [String],
         enum: ["AC", "Bathroom", "Dance Pole", "In-Vehicle Bar", "Luggage",
@@ -27,8 +23,6 @@ const featureSchema = new Schema({
         type: [String],
         enum: ["Alcohol Friendly", "Food Allowed", "Pets Allowed", "Smoking Allowed"]
     },
-
-    //------child seats------
     childSeats: {
         rearFacing: childSeatSchema,
         forwardFacing: childSeatSchema,
@@ -36,23 +30,17 @@ const featureSchema = new Schema({
     }
 })
 
-/* --------------------- Prcing schema --------------------- */
-const rateTypeEnum = { type: String, enum: ["per_mile", "flat"], default: "per_mile" }
-const hourlyRateTypeEnum = { type: String, enum: ["per_hour", "flat"], default: "per_hour" }
-
 const tierSchema = new Schema({
-    milesLimit: Number,     // omitted/null on the last "remaining miles" tier
+    milesLimit: Number,
     rate: { type: Number, required: true },
     rateType: { type: String, enum: ["per_mile", "flat"], default: "per_mile" }
 }, { _id: false })
 
 const hourlyBlockSchema = new Schema({
     tieredPricing: { type: Boolean, default: false },
-
     hourlyMinimum: {
         type: String,
         required: function () {
-            // required whenever BRAuto is on, same as before — tiering doesn't remove this one
             return this.parent().parent().BRAuto === true
         }
     },
@@ -63,7 +51,6 @@ const hourlyBlockSchema = new Schema({
         }
     },
     rateType: { type: String, enum: ["per_hour", "flat"], default: "per_hour" },
-
     tiers: {
         type: [tierSchema],
         required: function () { return this.tieredPricing === true }
@@ -72,19 +59,14 @@ const hourlyBlockSchema = new Schema({
 
 const priceSchema = new Schema({
     BRAuto: { type: Boolean, default: false },
-
     transfer: {
         tieredPricing: { type: Boolean, default: false },
-
-        // required if BRAuto is on, OR tiering is on — two separate reasons, same field
         deadheadRatePerMile: {
             type: Number,
             required: function () {
                 return this.BRAuto === true || this.tieredPricing === true
             }
         },
-
-        // only exists/required in the non-tiered case
         minimumTotalBaseRate: {
             type: Number,
             required: function () {
@@ -98,15 +80,12 @@ const priceSchema = new Schema({
             }
         },
         transferRateType: { type: String, enum: ["per_mile", "flat"], default: "per_mile" },
-
-        // only relevant/required in the tiered case
         tierMode: { type: String, enum: ["incremental", "fixed_tier"] },
         tiers: {
             type: [tierSchema],
             required: function () { return this.tieredPricing === true }
         }
     },
-
     hourly: {
         coveredDeadheadDuration: { type: String, default: "disabled" },
         weekdays: hourlyBlockSchema,
@@ -117,9 +96,14 @@ const priceSchema = new Schema({
     }
 })
 
-/* --------------------------------- main vehicle schema ------------------------------ */
-
 const vehicleSchema = new Schema({
+    // ============ OPERATOR ID (CRITICAL) ============
+    operatorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        index: true
+    },
 
     id: { type: String, unique: true },
 
@@ -128,21 +112,19 @@ const vehicleSchema = new Schema({
     type: { type: String, trim: true, required: true },
     passengerCapacity: { type: Number, min: 0, required: true },
 
-
     /* optional info */
     licenseNo: { type: String },
     description: { type: String, trim: true },
-    exteriorColor: {type:String, trim:true},
+    exteriorColor: { type: String, trim: true },
     vinNumber: { type: String },
     cancellationPolicy: { type: Number },
     insurancePolicy: { type: Number },
-    // pro feature
     garageLocation: { type: String },
 
-    /* photos -- .jpg .png files */
+    /* photos */
     images: {
         type: [{
-            url: { type: String},
+            url: { type: String },
             isPrimary: { type: Boolean, default: false }
         }],
         validate: {
@@ -159,12 +141,21 @@ const vehicleSchema = new Schema({
     /* pricing */
     price: priceSchema,
 
-    /* customer portal settings  BRAuto-> base rate automation*/
+    /* customer portal settings */
     display: { type: Boolean, default: true },
     enableBRAuto: { type: Boolean, default: true },
     reservationReq: { type: Boolean, default: false },
-    blockQuoteReq: { type: Boolean },  // pro feature
-    blockResOnConflict: { type: Boolean },  // pro feature
-})
+    blockQuoteReq: { type: Boolean },
+    blockResOnConflict: { type: Boolean },
 
-module.exports = mongoose.model("Vehicle", vehicleSchema);
+    // ============ CREATED BY (Who created this vehicle) ============
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        index: true
+    }
+
+}, { timestamps: true })
+
+module.exports = mongoose.model("Vehicle", vehicleSchema)

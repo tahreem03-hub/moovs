@@ -1,59 +1,65 @@
+// src/modules/admin/services/adminService.js
 import axios from 'axios';
-
 
 const API_URL = import.meta.env.VITE_URL;
 
-/**
- * Dedicated axios instance for admin calls.
- * - withCredentials: true  -> supports cookie/session auth (isAuthenticated middleware)
- * - Authorization header   -> supports JWT stored in localStorage (adjust key if different)
- */
-/*const api = axios.create({
+const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token'); // adjust key to match your auth setup
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  headers: {
+    'Content-Type': 'application/json'
   }
-  return config;
 });
-*/
 
-const api = axios.create({
-    baseURL: API_URL,
-    withCredentials: true,
-});
-// delete the api.interceptors.request.use(...) block entirely
+// ============ DASHBOARD ============
+export const getStats = () => api.get('/admin/stats');
 
+// ============ SUBSCRIPTION STATS ============
+export const getSubscriptionStats = () => api.get('/admin/subscription-stats');
 
-export const adminService = {
-  // Dashboard
-  getStats: () => api.get('/admin/stats'),
+// ============ OPERATOR MANAGEMENT ============
+export const getOperators = (page = 1, limit = 10, search = '') => 
+  api.get(`/admin/operators?page=${page}&limit=${limit}&search=${search}`);
 
-  // Operators
-  getOperators: (page = 1, limit = 10, search = '') =>
-    api.get('/admin/operators', { params: { page, limit, search } }),
+export const getOperatorById = (id) => 
+  api.get(`/admin/operators/${id}`);
 
-  getOperatorById: (id) => api.get(`/admin/operators/${id}`),
+export const createOperator = (data) => 
+  api.post('/admin/operators', data);
 
-  updateOperator: (id, data) => api.put(`/admin/operators/${id}`, data),
+export const updateOperator = (id, data) => 
+  api.put(`/admin/operators/${id}`, data);
 
-  deleteOperator: (id) => api.delete(`/admin/operators/${id}`),
+export const deleteOperator = (id) => 
+  api.delete(`/admin/operators/${id}`);
 
-  toggleOperatorStatus: (id) => api.patch(`/admin/operators/${id}/toggle`),
+export const toggleOperatorStatus = (id) => 
+  api.patch(`/admin/operators/${id}/toggle`);
 
-  getOperatorCompanies: (id) => api.get(`/admin/operators/${id}/companies`),
+// ============ OPERATOR DETAILS ============
+export const getOperatorCompanies = (id) => 
+  api.get(`/admin/operators/${id}/companies`);
 
-  getOperatorVehicles: (id) => api.get(`/admin/operators/${id}/vehicles`),
+export const getOperatorVehicles = (id) => 
+  api.get(`/admin/operators/${id}/vehicles`);
 
-  getSubscriptionStats: () => api.get('/admin/subscriptions/stats'),
+// ============ ERROR HANDLER ============
+export const getErrorMessage = (error) => {
+  return error.response?.data?.message || error.message || 'Something went wrong';
 };
 
-/** Extract a readable error message from an axios error for toasts. */
-export const getErrorMessage = (err, fallback = 'Something went wrong') =>
-  err?.response?.data?.message || err?.response?.data?.error || err?.message || fallback;
+const adminService = {
+  getStats,
+  getSubscriptionStats,
+  getOperators,
+  getOperatorById,
+  createOperator,
+  updateOperator,
+  deleteOperator,
+  toggleOperatorStatus,
+  getOperatorCompanies,
+  getOperatorVehicles,
+  getErrorMessage
+};
 
 export default adminService;

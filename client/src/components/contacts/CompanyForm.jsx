@@ -116,11 +116,12 @@ const CompanyForm = ({ onCompanyCreated }) => {
     try {
       setSubmitting(true);
       const response = await axios.post(
-        `${import.meta.env.VITE_URL}/company/create`,
+        '/company/create',
         formData,
         {
+          withCredentials: true,
           headers: {
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "application/json",
           },
         }
       );

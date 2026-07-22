@@ -13,13 +13,28 @@ const getDashboardStats = async () => {
     Contact.countDocuments()
   ]);
 
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const recentSignups = await User.countDocuments({
+    role: 'user',
+    createdAt: { $gte: sevenDaysAgo }
+  });
+
+  const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const trialExpiring = await User.countDocuments({
+    role: 'user',
+    subscriptionStatus: 'trial',
+    subscriptionExpiry: { $lte: sevenDaysFromNow }
+  });
+
   return {
     totalOperators,
     activeOperators,
+    pendingOperators: totalOperators - activeOperators,
     totalCompanies,
     totalVehicles,
     totalContacts,
-    pendingOperators: totalOperators - activeOperators
+    recentSignups,
+    trialExpiring
   };
 };
 
@@ -29,10 +44,10 @@ const getOperators = async (search = '', page = 1, limit = 10) => {
   if (search.trim()) {
     const regex = new RegExp(search.trim(), 'i');
     query.$or = [
-      { firstName: regex },
-      { lastName: regex },
+      { Fname: regex },
+      { Lname: regex },
       { email: regex },
-      { companyName: regex }
+      { CompanyName: regex }
     ];
   }
 
@@ -50,7 +65,6 @@ const getOperators = async (search = '', page = 1, limit = 10) => {
     User.countDocuments(query)
   ]);
 
-  // Get stats for each operator
   const operatorsWithStats = await Promise.all(operators.map(async (op) => {
     const [companies, vehicles, contacts] = await Promise.all([
       Company.countDocuments({ createdBy: op._id }),
@@ -84,42 +98,47 @@ const getOperatorById = async (id) => {
   }
 
   const [companies, vehicles, contacts] = await Promise.all([
-    Company.countDocuments({ createdBy: id }),
-    Vehicle.countDocuments({ createdBy: id }),
-    Contact.countDocuments({ createdBy: id })
+    Company.find({ createdBy: id }).select('name email phone createdAt').lean(),
+    Vehicle.find({ createdBy: id }).select('name type passengerCapacity createdAt').lean(),
+    Contact.find({ createdBy: id }).select('firstName lastName email phone createdAt').lean()
   ]);
 
   return {
     ...operator,
-    stats: { companies, vehicles, contacts }
+    companies,
+    vehicles,
+    contacts
   };
 };
 
-const createOperator = async (data) => {
-  const { firstName, lastName, email, password, companyName, phone } = data;
+const createOperator = async (data, adminId) => {
+  const { Fname, Lname, email, CompanyName, password, phone, subscriptionPlan, subscriptionStatus } = data;
 
-  // Check if email already exists
   const existing = await User.findOne({ email: email.toLowerCase().trim() });
   if (existing) {
     throw new Error('A user with this email already exists');
   }
 
   const user = await User.create({
-    firstName,
-    lastName,
+    Fname,
+    Lname,
     email: email.toLowerCase().trim(),
     password,
-    companyName,
-    phone,
+    CompanyName,
+    phone: phone || '',
     role: 'user',
-    isActive: true
+    isActive: true,
+    createdBy: adminId,
+    subscriptionPlan: subscriptionPlan || 'free',
+    subscriptionStatus: subscriptionStatus || 'trial',
+    subscriptionExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   });
 
   return user;
 };
 
 const updateOperator = async (id, data) => {
-  const { firstName, lastName, email, companyName, phone, isActive, subscriptionPlan, subscriptionStatus } = data;
+  const { Fname, Lname, email, CompanyName, phone, isActive, subscriptionPlan, subscriptionStatus } = data;
 
   const operator = await User.findById(id);
   if (!operator) {
@@ -137,9 +156,9 @@ const updateOperator = async (id, data) => {
     operator.email = email.toLowerCase().trim();
   }
 
-  if (firstName) operator.firstName = firstName;
-  if (lastName) operator.lastName = lastName;
-  if (companyName !== undefined) operator.companyName = companyName;
+  if (Fname) operator.Fname = Fname;
+  if (Lname) operator.Lname = Lname;
+  if (CompanyName !== undefined) operator.CompanyName = CompanyName;
   if (phone !== undefined) operator.phone = phone;
   if (isActive !== undefined) operator.isActive = isActive;
   if (subscriptionPlan !== undefined) operator.subscriptionPlan = subscriptionPlan;
@@ -155,7 +174,6 @@ const deleteOperator = async (id) => {
     throw new Error('Operator not found');
   }
 
-  // Prevent deleting the last admin
   if (operator.role === 'admin') {
     const adminCount = await User.countDocuments({ role: 'admin' });
     if (adminCount <= 1) {
@@ -163,7 +181,6 @@ const deleteOperator = async (id) => {
     }
   }
 
-  // Delete all associated data
   await Promise.all([
     Company.deleteMany({ createdBy: id }),
     Vehicle.deleteMany({ createdBy: id }),
@@ -184,21 +201,6 @@ const toggleOperatorStatus = async (id) => {
   return operator;
 };
 
-const getSubscriptionStats = async () => {
-  const [byPlan, byStatus] = await Promise.all([
-    User.aggregate([
-      { $match: { role: 'user' } },
-      { $group: { _id: '$subscriptionPlan', count: { $sum: 1 } } },
-    ]),
-    User.aggregate([
-      { $match: { role: 'user' } },
-      { $group: { _id: '$subscriptionStatus', count: { $sum: 1 } } },
-    ]),
-  ]);
-  const toMap = (arr) => arr.reduce((m, r) => { m[r._id || 'unknown'] = r.count; return m; }, {});
-  return { byPlan: toMap(byPlan), byStatus: toMap(byStatus) };
-};
-
 module.exports = {
   getDashboardStats,
   getOperators,
@@ -206,6 +208,5 @@ module.exports = {
   createOperator,
   updateOperator,
   deleteOperator,
-  toggleOperatorStatus,
-  getSubscriptionStats
+  toggleOperatorStatus
 };

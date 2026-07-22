@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
     email: {
         type: String,
         required: [true, "Please enter your email!"],
-        unique: true,  //creates a unique index in MongoDB.
+        unique: true,
         trim: true,
         lowercase: true,
     },
@@ -32,50 +32,55 @@ const userSchema = new mongoose.Schema({
         default: Date.now,
     },
 
-
     // Admin Management Fields
-  phone: {
-    type: String,
-    trim: true
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  subscriptionPlan: {
-    type: String,
-    enum: ['free', 'basic', 'pro', 'enterprise'],
-    default: 'free'
-  },
-  subscriptionStatus: {
-    type: String,
-    enum: ['active', 'inactive', 'trial', 'expired'],
-    default: 'trial'
-  },
-  subscriptionExpiry: {
-    type: Date
-  },
+    phone: {
+        type: String,
+        trim: true
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    subscriptionPlan: {
+        type: String,
+        enum: ['free', 'basic', 'pro', 'enterprise'],
+        default: 'free'
+    },
+    subscriptionStatus: {
+        type: String,
+        enum: ['active', 'inactive', 'trial', 'expired'],
+        default: 'trial'
+    },
+    subscriptionExpiry: {
+        type: Date
+    },
 
-  role: {
-    type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
-},
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
+    },
+
+    // ============ CREATED BY (Who created this user) ============
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,  // null = self-registered
+        index: true
+    }
 
 });
 
-
-// hash password before saving to db
+// Hash password before saving
 userSchema.pre("save", async function (next) {
-    if(!this.isModified("password")){
-        return next();
+    if (!this.isModified("password")) {
+        return;
     }
     this.password = await bcrypt.hash(this.password, 10);
-    
 })
 
-userSchema.methods.getJwtToken = function (){
-    return jwt.sign({id: this._id}, process.env.JWT_SECRET_KEY, {
+userSchema.methods.getJwtToken = function () {
+    return jwt.sign({ id: this._id }, process.env.JWT_SECRET_KEY, {
         expiresIn: process.env.JWT_EXPIRES,
     });
 };

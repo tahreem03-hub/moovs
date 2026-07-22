@@ -8,6 +8,9 @@ const {
   updateCompany,
   deleteCompany,
 } = require('../controller/companyController');
+const { isAuthenticated } = require('../middleware/auth');
+
+router.use(isAuthenticated);
 
 router.post('/create', upload.single('photo'), createCompany);
 

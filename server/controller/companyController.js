@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const Company = require('../models/Company');
+const fs = require('fs');
+const path = require('path');
 
 // Helper function to generate unique filename
 const generateFilename = (originalname) => {
@@ -9,32 +11,40 @@ const generateFilename = (originalname) => {
   return `company-${timestamp}-${random}.${ext}`;
 };
 
-// Helper function to get file URL (since we're using memory storage)
+// Helper function to get file URL
 const getFileUrl = (filename) => {
   if (!filename) return null;
   return `/uploads/companies/${filename}`;
 };
 
+// Helper to delete file
+const deletePhotoFile = (filename) => {
+  if (!filename) return;
+  const filePath = path.join(__dirname, '../uploads/companies', filename);
+  fs.unlink(filePath, (err) => {
+    if (err && err.code !== 'ENOENT') {
+      console.error('Error deleting photo file:', err);
+    }
+  });
+};
+
 /**
  * @desc    Create a new company
- * @route   POST /api/companies
+ * @route   POST /api/company/create
  * @access  Private
  */
 const createCompany = async (req, res) => {
   try {
     const { name, phone, email, address, website, description } = req.body;
 
-    // Check duplicate
+    // ✅ Check duplicate for this operator only
     const existing = await Company.findOne({
       name: name?.trim(),
+      createdBy: req.user._id  // ✅ Only check this operator's companies
     });
     
     if (existing) {
-      // Delete uploaded file if it exists
-      if (req.file) {
-        const fs = require('fs');
-        fs.unlink(req.file.path, () => {});
-      }
+      if (req.file) deletePhotoFile(req.file.filename);
       return res.status(409).json({
         success: false,
         message: 'Company with this name already exists.',
@@ -48,7 +58,7 @@ const createCompany = async (req, res) => {
       address: address?.trim() || '',
       website: website?.trim() || '',
       description: description?.trim() || '',
-      createdBy: req.user?._id || null,
+      createdBy: req.user._id,  // ✅ Always set to logged-in user
     };
 
     // Save photo if uploaded
@@ -67,11 +77,7 @@ const createCompany = async (req, res) => {
       data: company,
     });
   } catch (error) {
-    // Delete uploaded file on error
-    if (req.file) {
-      const fs = require('fs');
-      fs.unlink(req.file.path, () => {});
-    }
+    if (req.file) deletePhotoFile(req.file.filename);
     
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(e => e.message);
@@ -87,19 +93,16 @@ const createCompany = async (req, res) => {
 };
 
 /**
- * @desc    List / search companies
- * @route   GET /api/companies?search=&page=&limit=
+ * @desc    List / search companies (Operator only)
+ * @route   GET /api/company/list
  * @access  Private
  */
 const getCompanies = async (req, res) => {
   try {
-
-    const [companies, total] = await Promise.all([
-      Company.find()
-        .select('name email phone address website photo createdAt')
-        .sort({ createdAt: -1 }),
-      Company.countDocuments(),
-    ]);
+    // ✅ Only get companies created by this operator
+    const companies = await Company.find({ createdBy: req.user._id })
+      .select('name email phone address website photo createdAt')
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -115,8 +118,8 @@ const getCompanies = async (req, res) => {
 };
 
 /**
- * @desc    Get a single company
- * @route   GET /api/companies/:id
+ * @desc    Get a single company (Operator only)
+ * @route   GET /api/company/:id
  * @access  Private
  */
 const getCompanyById = async (req, res) => {
@@ -130,8 +133,10 @@ const getCompanyById = async (req, res) => {
       });
     }
 
+    // ✅ Ensure operator owns this company
     const company = await Company.findOne({
       _id: id,
+      createdBy: req.user._id
     }).lean();
 
     if (!company) {
@@ -155,8 +160,8 @@ const getCompanyById = async (req, res) => {
 };
 
 /**
- * @desc    Update a company
- * @route   PUT /api/companies/:id
+ * @desc    Update a company (Operator only)
+ * @route   PUT /api/company/update/:id
  * @access  Private
  */
 const updateCompany = async (req, res) => {
@@ -165,35 +170,39 @@ const updateCompany = async (req, res) => {
     const { name, phone, email, address, website, description, removePhoto } = req.body;
 
     if (!mongoose.isValidObjectId(id)) {
+      if (req.file) deletePhotoFile(req.file.filename);
       return res.status(400).json({
         success: false,
         message: 'Invalid company ID format.',
       });
     }
 
-    // Find the company
+    // ✅ Ensure operator owns this company
     const company = await Company.findOne({
       _id: id,
+      createdBy: req.user._id
     });
 
     if (!company) {
+      if (req.file) deletePhotoFile(req.file.filename);
       return res.status(404).json({
         success: false,
         message: 'Company not found.',
       });
     }
 
-    // Check for duplicate name when changing name
+    // Check for duplicate name when changing name (within this operator's companies)
     if (name && name.trim()) {
       const trimmedName = name.trim();
       if (trimmedName.toLowerCase() !== company.name.toLowerCase()) {
         const existing = await Company.findOne({
           _id: { $ne: company._id },
           name: trimmedName,
-  
+          createdBy: req.user._id  // ✅ Only check this operator's companies
         });
 
         if (existing) {
+          if (req.file) deletePhotoFile(req.file.filename);
           return res.status(409).json({
             success: false,
             message: 'A company with this name already exists.',
@@ -210,16 +219,19 @@ const updateCompany = async (req, res) => {
     if (website !== undefined) company.website = website?.trim() || '';
     if (description !== undefined) company.description = description?.trim() || '';
 
-    // Handle photo update with memory storage
+    // Handle photo
     if (req.file) {
-      // Generate new filename for the new photo
-      const filename = generateFilename(req.file.originalname);
+      if (company.photo?.filename) {
+        deletePhotoFile(company.photo.filename);
+      }
       company.photo = {
-        url: getFileUrl(filename),
-        filename: filename,
+        url: `/uploads/companies/${req.file.filename}`,
+        filename: req.file.filename,
       };
     } else if (removePhoto === 'true' || removePhoto === true) {
-      // Remove existing photo
+      if (company.photo?.filename) {
+        deletePhotoFile(company.photo.filename);
+      }
       company.photo = { url: null, filename: null };
     }
 
@@ -231,7 +243,8 @@ const updateCompany = async (req, res) => {
       data: company,
     });
   } catch (error) {
-    // Handle duplicate key error
+    if (req.file) deletePhotoFile(req.file.filename);
+
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
@@ -239,7 +252,6 @@ const updateCompany = async (req, res) => {
       });
     }
 
-    // Handle validation errors
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map((e) => e.message);
       return res.status(400).json({
@@ -257,8 +269,8 @@ const updateCompany = async (req, res) => {
 };
 
 /**
- * @desc    Soft-delete a company
- * @route   DELETE /api/companies/:id
+ * @desc    Delete a company (Operator only)
+ * @route   DELETE /api/company/delete/:id
  * @access  Private
  */
 const deleteCompany = async (req, res) => {
@@ -272,8 +284,11 @@ const deleteCompany = async (req, res) => {
       });
     }
 
-    // First find the company to get the photo filename
-    const company = await Company.findById(id);
+    // ✅ Ensure operator owns this company
+    const company = await Company.findOne({
+      _id: id,
+      createdBy: req.user._id
+    });
 
     if (!company) {
       return res.status(404).json({
@@ -284,14 +299,7 @@ const deleteCompany = async (req, res) => {
 
     // Delete the photo file from disk if it exists
     if (company.photo?.filename) {
-      const fs = require('fs');
-      const path = require('path');
-      const filePath = path.join(__dirname, '../uploads/companies', company.photo.filename);
-      fs.unlink(filePath, (err) => {
-        if (err && err.code !== 'ENOENT') {
-          console.error('Error deleting photo file:', err);
-        }
-      });
+      deletePhotoFile(company.photo.filename);
     }
 
     // Permanently delete the company from database
@@ -299,7 +307,7 @@ const deleteCompany = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Company permanently deleted successfully.',
+      message: 'Company deleted successfully.',
       data: { id: company._id },
     });
   } catch (error) {
@@ -310,10 +318,37 @@ const deleteCompany = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Get companies for dropdown (Operator only)
+ * @route   GET /api/company/dropdown
+ * @access  Private
+ */
+const getCompanyDropdown = async (req, res) => {
+  try {
+    const companies = await Company.find({ createdBy: req.user._id })
+      .select('name _id')
+      .sort({ name: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      data: companies,
+    });
+  } catch (error) {
+    console.error('getCompanyDropdown error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch companies for dropdown.',
+    });
+  }
+};
+
 module.exports = {
   createCompany,
   getCompanies,
   getCompanyById,
   updateCompany,
   deleteCompany,
+  getCompanyDropdown,
 };

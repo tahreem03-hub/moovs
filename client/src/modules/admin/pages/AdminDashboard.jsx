@@ -1,123 +1,130 @@
-
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { adminService, getErrorMessage } from '../services/adminService';
+// src/modules/admin/pages/AdminDashboard.jsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, RefreshCw } from 'lucide-react';
+import adminService from '../services/adminService';
 import StatsCards from '../components/StatsCards';
- 
-const timeAgo = (date) => {
-  if (!date) return '';
-  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
-  const units = [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['minute', 60]];
-  for (const [name, secs] of units) {
-    const value = Math.floor(seconds / secs);
-    if (value >= 1) return `${value} ${name}${value > 1 ? 's' : ''} ago`;
-  }
-  return 'just now';
-};
- 
-const planLabel = (plan) =>
-  ({ free: 'Free', basic: 'Basic', pro: 'Pro', enterprise: 'Enterprise' }[plan] || 'Free');
- 
-const fullName = (op) => [op.Fname, op.Lname].filter(Boolean).join(' ');
- 
+import toast from 'react-hot-toast';
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({});
-  const [recent, setRecent] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
- 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true);
-        const [statsRes, operatorsRes] = await Promise.all([
-          adminService.getStats(),
-          adminService.getOperators(1, 5, ''),
-        ]);
-        if (cancelled) return;
- 
-        const statsData = statsRes.data?.data || statsRes.data || {};
-        setStats(statsData.stats || statsData);
- 
-        // backend responds { success, data: [...], pagination: {...} }
-        const opsData = operatorsRes.data?.data || operatorsRes.data || {};
-        setRecent(Array.isArray(opsData) ? opsData : opsData.operators || opsData.results || []);
-      } catch (err) {
-        if (!cancelled) toast.error(getErrorMessage(err, 'Failed to load dashboard'));
-      } finally {
-        if (!cancelled) setLoading(false);
+  const [recentOperators, setRecentOperators] = useState([]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [statsRes, operatorsRes] = await Promise.all([
+        adminService.getStats(),
+        adminService.getOperators(1, 5, '')
+      ]);
+
+      if (statsRes.data.success) {
+        setStats(statsRes.data.data);
       }
-    })();
-    return () => { cancelled = true; };
+      if (operatorsRes.data.success) {
+        setRecentOperators(operatorsRes.data.data || []);
+      }
+    } catch (error) {
+      console.error('Fetch dashboard error:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
   }, []);
- 
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Platform overview and recent activity</p>
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm text-gray-500">Overview of your transportation platform</p>
+        </div>
+        <button
+          onClick={fetchDashboardData}
+          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <RefreshCw className="w-5 h-5" />
+        </button>
       </div>
- 
-      <StatsCards stats={stats} loading={loading} />
- 
+
+      {/* Stats Cards */}
+      {stats && <StatsCards stats={stats} />}
+
+      {/* Recent Operators */}
       <div className="mt-8">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Recent Operators</h2>
-          <Link
-            to="/admin/operators"
-            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+          <button
+            onClick={() => navigate('/admin/operators')}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
           >
-            View all operators
+            View All
             <ArrowRight className="w-4 h-4" />
-          </Link>
+          </button>
         </div>
- 
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm divide-y divide-gray-100">
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-            </div>
-          ) : recent.length === 0 ? (
-            <div className="py-16 text-center">
-              <p className="text-sm font-medium text-gray-900">No operators yet</p>
-              <p className="text-sm text-gray-500 mt-1">Operators appear here once they register.</p>
-            </div>
-          ) : (
-            recent.map((op) => (
-              <button
-                key={op._id}
-                type="button"
-                onClick={() => navigate(`/admin/operators/${op._id}`)}
-                className="w-full flex items-center justify-between gap-4 px-5 py-4 hover:bg-gray-50 transition-colors text-left"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{op.CompanyName || '—'}</p>
-                  <p className="text-sm text-gray-500 truncate">{fullName(op)} · {op.email}</p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                    {planLabel(op.subscriptionPlan)}
-                  </span>
-                  <span
-                    className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      op.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}
+
+        {recentOperators.length === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
+            <p>No operators registered yet</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {recentOperators.map((op) => (
+                  <tr
+                    key={op._id}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/admin/operators/${op._id}`)}
                   >
-                    {op.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                  <span className="hidden md:block text-xs text-gray-400 whitespace-nowrap">{timeAgo(op.createdAt)}</span>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
+                    <td className="px-4 py-3 font-medium text-gray-900">{op.CompanyName}</td>
+                    <td className="px-4 py-3 text-gray-700">{op.Fname} {op.Lname}</td>
+                    <td className="px-4 py-3 text-gray-600">{op.email}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700`}>
+                        {op.subscriptionPlan?.charAt(0).toUpperCase() + op.subscriptionPlan?.slice(1) || 'Free'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">
+                      {new Date(op.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 };
- 
+
 export default AdminDashboard;
- 

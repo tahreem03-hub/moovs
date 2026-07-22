@@ -10,7 +10,9 @@ import Pricing from './formTabContent/Pricing';
 import CustomerPortal from './formTabContent/CustomerPortal';
 import toast from 'react-hot-toast'
 
-const VehicleForm = ({onVehicleCreated}) => {
+import axios from 'axios'
+
+const VehicleForm = ({ onVehicleCreated }) => {
 
 
 
@@ -113,36 +115,36 @@ const VehicleForm = ({onVehicleCreated}) => {
 
     const [active, setActive] = useState(0);
 
-      const closeForm = () => {
-    navigate('/vehicles');
-  };
+    const closeForm = () => {
+        navigate('/vehicles');
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
-            const response = await fetch("http://localhost:8000/vehicle/create", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(formData),
-            });
+            const response = await axios.post(
+                "http://localhost:8000/vehicle/create",
+                formData, 
+                {
+                    withCredentials: true, 
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
 
-            const data = await response.json();
-
-            if (response.ok) {
-                toast.success ("Vehicle added successfully");
+          
+            if (response.status === 201) {
+                toast.success("Vehicle added successfully");
             } else {
-                toast.error(data.message);
-                
+                toast.error(response.data.message);
+            }
+            if (onVehicleCreated) {
+                onVehicleCreated(); // This will refresh the list without page reload
             }
 
-                  if (onVehicleCreated) {
-        onVehicleCreated(); // This will refresh the list without page reload
-      }
-
-      closeForm();
+            closeForm();
 
         } catch (error) {
             toast.error("Submit Error:", error);

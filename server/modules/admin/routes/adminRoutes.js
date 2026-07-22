@@ -5,26 +5,38 @@ const {
   getDashboardStats,
   getOperators,
   getOperatorById,
+  createOperator,
   updateOperator,
   deleteOperator,
   toggleOperatorStatus,
   getOperatorCompanies,
   getOperatorVehicles,
-  getSubscriptionStats
+  getSubscriptionStats  // ✅ Import
 } = require('../controllers/adminController');
-const { isAuthenticated, authorize } = require('../../../middleware/auth');
+const { isAuthenticated } = require('../../../middleware/auth');
 
-// All routes require authentication and admin role
 router.use(isAuthenticated);
-router.use(authorize('admin'));
 
-// Dashboard
+router.use(async (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin only.'
+    });
+  }
+  next();
+});
+
+// Dashboard - includes subscription stats
 router.get('/stats', getDashboardStats);
+
+
+router.get('/subscription-stats', getSubscriptionStats);
 
 // Operator Management
 router.get('/operators', getOperators);
-router.get('/subscriptions/stats', getSubscriptionStats);
 router.get('/operators/:id', getOperatorById);
+router.post('/operators', createOperator);
 router.put('/operators/:id', updateOperator);
 router.delete('/operators/:id', deleteOperator);
 router.patch('/operators/:id/toggle', toggleOperatorStatus);

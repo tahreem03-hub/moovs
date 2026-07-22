@@ -3,11 +3,30 @@ const mongoose = require('mongoose');
 const CompanyProfile = require('../models/settings/CompanyProfile');
 const TermsAndConditions = require('../models/settings/TermsAndConditions');
 const Vehicle = require('../models/Vehicle');
+const fs = require('fs');
+const path = require('path');
+
+// Helper to delete logo file
+const deleteLogoFile = (filename) => {
+  if (!filename) return;
+  const filePath = path.join(__dirname, '../uploads/branding', filename);
+  fs.unlink(filePath, (err) => {
+    if (err && err.code !== 'ENOENT') {
+      console.error('Error deleting branding logo:', err);
+    }
+  });
+};
 
 // ============ GET ALL CUSTOMER PORTAL SETTINGS ============
 const getCustomerPortalSettings = async (req, res) => {
   try {
-    const profile = await CompanyProfile.getCompanyProfile();
+    const profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company profile not found'
+      });
+    }
     return res.status(200).json({
       success: true,
       data: profile.customerPortal || {}
@@ -25,7 +44,19 @@ const getCustomerPortalSettings = async (req, res) => {
 const updatePaymentSettings = async (req, res) => {
   try {
     const { creditCardEnabled, paymentPreference, depositAmount, depositType } = req.body;
-    const profile = await CompanyProfile.getCompanyProfile();
+    
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
+
+    if (!profile.customerPortal) profile.customerPortal = {};
+    if (!profile.customerPortal.payments) profile.customerPortal.payments = {};
 
     if (creditCardEnabled !== undefined) {
       profile.customerPortal.payments.creditCardEnabled = creditCardEnabled;
@@ -70,7 +101,18 @@ const updateSettingsTab = async (req, res) => {
       vehicleOrderDirection
     } = req.body;
 
-    const profile = await CompanyProfile.getCompanyProfile();
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
+
+    if (!profile.customerPortal) profile.customerPortal = {};
+    if (!profile.customerPortal.settings) profile.customerPortal.settings = {};
 
     // Validate Terms & Conditions for customer signature
     if (customerSignature?.enabled) {
@@ -93,7 +135,6 @@ const updateSettingsTab = async (req, res) => {
 
     // Gratuity
     if (gratuity) {
-      // Ensure minimum percentage doesn't exceed max percentage
       if (gratuity.minPercentage && gratuity.minPercentage > 100) {
         return res.status(400).json({
           success: false,
@@ -167,11 +208,23 @@ const updateSettingsTab = async (req, res) => {
 const updateBranding = async (req, res) => {
   try {
     const { primaryColor, secondaryColor, accentColor, fontFamily, buttonStyle } = req.body;
-    const profile = await CompanyProfile.getCompanyProfile();
+    
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
+
+    if (!profile.customerPortal) profile.customerPortal = {};
+    if (!profile.customerPortal.branding) profile.customerPortal.branding = {};
 
     if (req.file) {
       if (profile.customerPortal.branding.logo?.filename) {
-        // Delete old logo (implement delete function)
+        deleteLogoFile(profile.customerPortal.branding.logo.filename);
       }
       profile.customerPortal.branding.logo = {
         url: `/uploads/branding/${req.file.filename}`,
@@ -192,6 +245,7 @@ const updateBranding = async (req, res) => {
       data: profile.customerPortal.branding
     });
   } catch (error) {
+    if (req.file) deleteLogoFile(req.file.filename);
     console.error('Update branding error:', error);
     return res.status(500).json({
       success: false,
@@ -204,7 +258,19 @@ const updateBranding = async (req, res) => {
 const updatePromoCodes = async (req, res) => {
   try {
     const { enabled, autoApply, codes } = req.body;
-    const profile = await CompanyProfile.getCompanyProfile();
+    
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
+
+    if (!profile.customerPortal) profile.customerPortal = {};
+    if (!profile.customerPortal.promoCode) profile.customerPortal.promoCode = {};
 
     if (enabled !== undefined) profile.customerPortal.promoCode.enabled = enabled;
     if (autoApply !== undefined) profile.customerPortal.promoCode.autoApply = autoApply;
@@ -228,7 +294,10 @@ const updatePromoCodes = async (req, res) => {
 // ============ GET VEHICLES FOR DROPDOWN ============
 const getVehiclesForDropdown = async (req, res) => {
   try {
-    const vehicles = await Vehicle.find({ isActive: true })
+    const vehicles = await Vehicle.find({ 
+      operatorId: req.user._id,
+      isActive: true 
+    })
       .select('name type passengerCapacity _id')
       .sort({ name: 1 })
       .lean();

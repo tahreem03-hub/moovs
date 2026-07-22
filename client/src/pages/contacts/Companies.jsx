@@ -84,7 +84,10 @@ const Companies = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${import.meta.env.VITE_URL}/company/list?search=${search}`
+        `${import.meta.env.VITE_URL}/company/list?search=${search}`,
+        {
+          withCredentials: true,
+        }
       );
       setCompanies(response.data.data || []);
     } catch (error) {

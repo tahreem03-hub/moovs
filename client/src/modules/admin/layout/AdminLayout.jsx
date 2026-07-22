@@ -7,7 +7,11 @@ const NAV = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/operators', label: 'Operators', icon: Users, end: false },
   { to: '/admin/subscriptions', label: 'Subscriptions', icon: CreditCard, end: false },
+  { to: '/admin/plans', label: 'Plans', icon: Crown, end: false },
+
 ];
+
+
 
 const AdminLayout = () => {
   const navigate = useNavigate();

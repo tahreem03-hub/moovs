@@ -2,9 +2,18 @@ const mongoose = require('mongoose');
 
 const companyProfileSchema = new mongoose.Schema({
 
+    // ============ OPERATOR ID (CRITICAL) ============
+    operatorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        index: true,
+        unique: true // Each operator has ONE profile
+    },
+
     // ================================================general================================================
     // ============ COMPANY TAB ============
-    name: { type: String, trim: true },
+    name: { type: String, trim: true, default: 'My Transportation Company' },
     logo: { url: String, filename: String },
     phone: { type: String, trim: true },
     email: { type: String, trim: true, lowercase: true },
@@ -27,8 +36,8 @@ const companyProfileSchema = new mongoose.Schema({
         sendAutomatedCancellationEmails: { type: Boolean, default: true },
 
         // Custom Domain
-        customDomain: { type: String, trim: true },
-        domainEmail: { type: String, trim: true, lowercase: true },
+        customDomain: { type: String, trim: true, default: '' },
+        domainEmail: { type: String, trim: true, lowercase: true, default: '' },
         domainVerified: { type: Boolean, default: false },
 
         // SMTP Settings (for sending emails)
@@ -43,9 +52,9 @@ const companyProfileSchema = new mongoose.Schema({
 
     // ============ PAYMENTS TAB ============
     payments: {
-        businessType: { type: String, trim: true },
-        businessName: { type: String, trim: true },
-        ein: { type: String, trim: true },
+        businessType: { type: String, trim: true, default: '' },
+        businessName: { type: String, trim: true, default: '' },
+        ein: { type: String, trim: true, default: '' },
         bankAccounts: [{
             accountName: { type: String, trim: true },
             routingNumber: { type: String, trim: true },
@@ -173,7 +182,6 @@ const companyProfileSchema = new mongoose.Schema({
 
 
     // Customer Portal Section
-
     customerPortal: {
         // ============ PAYMENTS TAB ============
         payments: {
@@ -199,11 +207,11 @@ const companyProfileSchema = new mongoose.Schema({
             // Gratuity
             gratuity: {
                 enabled: { type: Boolean, default: false },
-                percentages: [{ type: Number, default: 15 }], // 15%, 18%, 20%
+                percentages: [{ type: Number, default: 15 }],
                 cashOption: { type: Boolean, default: false },
                 customOption: { type: Boolean, default: true },
                 minPercentage: { type: Number, default: 15 },
-                optional: { type: Boolean, default: true } // false = required
+                optional: { type: Boolean, default: true }
             },
 
             // Customer Signature (Terms & Conditions)
@@ -222,7 +230,7 @@ const companyProfileSchema = new mongoose.Schema({
             // Request Changes to Trip
             requestChanges: {
                 automated: { type: Boolean, default: false },
-                cutoffPeriod: { type: Number, default: 7 }, // days
+                cutoffPeriod: { type: Number, default: 7 },
                 allowCancellation: { type: Boolean, default: false }
             },
 
@@ -254,8 +262,8 @@ const companyProfileSchema = new mongoose.Schema({
         // ============ BRANDING TAB ============
         branding: {
             logo: {
-                url: { type: String },
-                filename: { type: String }
+                url: { type: String, default: '' },
+                filename: { type: String, default: '' }
             },
             primaryColor: { type: String, default: '#2563EB' },
             secondaryColor: { type: String, default: '#1E293B' },
@@ -286,17 +294,28 @@ const companyProfileSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-// Ensure only one company profile exists
-companyProfileSchema.statics.getCompanyProfile = async function () {
-    let profile = await this.findOne();
+// Get or create profile for a specific operator
+companyProfileSchema.statics.getCompanyProfile = async function(operatorId) {
+    if (!operatorId) {
+        throw new Error('operatorId is required to get company profile');
+    }
+
+    let profile = await this.findOne({ operatorId });
+    
     if (!profile) {
         profile = await this.create({
+            operatorId: operatorId,
             name: 'My Transportation Company',
             email: 'info@mycompany.com',
             phone: '+1 234 567 8900'
         });
     }
     return profile;
+};
+
+// ✅ FIXED: Get profile by operator ID
+companyProfileSchema.statics.getProfileByOperator = async function(operatorId) {
+    return await this.findOne({ operatorId });
 };
 
 module.exports = mongoose.model('CompanyProfile', companyProfileSchema);

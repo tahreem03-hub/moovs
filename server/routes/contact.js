@@ -8,6 +8,9 @@ const {
   deleteContact,
   getContactDropdown,
 } = require('../controller/contactController');
+const { isAuthenticated } = require('../middleware/auth');
+
+router.use(isAuthenticated);
 
 router.post('/create', createContact);
 
