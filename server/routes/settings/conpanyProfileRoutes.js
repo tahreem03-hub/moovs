@@ -19,9 +19,9 @@ const {
   updateCustomerPortalBranding,
   getCustomerPortalPromoCodes,
   updateCustomerPortalPromoCodes
-} = require('../controller/companyProfileController');
-const { isAuthenticated } = require('../middleware/auth');
-const upload = require('../middleware/multer');
+} = require('../../controller/settings/companyProfileController');
+const { isAuthenticated } = require('../../middleware/auth');
+const upload = require('../../middleware/multer');
 
 // All routes require authentication
 router.use(isAuthenticated);

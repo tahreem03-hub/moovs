@@ -8,9 +8,9 @@ const {
   updateDriver,
   deleteDriver,
   getDriverDropdown
-} = require('../controller/driverController');
-const { isAuthenticated } = require('../middleware/auth');
-const upload = require('../middleware/multer');
+} = require('../../controller/settings/driverController');
+const { isAuthenticated } = require('../../middleware/auth');
+const upload = require('../../middleware/multer');
 
 router.use(isAuthenticated);
 

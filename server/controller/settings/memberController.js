@@ -1,6 +1,6 @@
 // controllers/memberController.js
 const mongoose = require('mongoose');
-const Member = require('../models/settings/Member');
+const Member = require('../../models/settings/Member');
 
 // Create Member
 const createMember = async (req, res) => {

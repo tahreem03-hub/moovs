@@ -25,7 +25,7 @@ export const updateQuote = (id, data) =>
   api.put(`/quote/update/${id}`, data);
 
 export const updateQuoteStatus = (id, status) => 
-  api.patch(`/quote/${id}/status`, { status });
+  api.put(`/quote/${id}/status`, { status });
 
 export const deleteQuote = (id) => 
   api.delete(`/quote/delete/${id}`);

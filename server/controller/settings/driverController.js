@@ -1,6 +1,6 @@
 // controllers/driverController.js
 const mongoose = require('mongoose');
-const Driver = require('../models/settings/Driver');
+const Driver = require('../../models/settings/Driver');
 const fs = require('fs');
 const path = require('path');
 

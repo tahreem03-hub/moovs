@@ -39,7 +39,7 @@ router.get('/operators/:id', getOperatorById);
 router.post('/operators', createOperator);
 router.put('/operators/:id', updateOperator);
 router.delete('/operators/:id', deleteOperator);
-router.patch('/operators/:id/toggle', toggleOperatorStatus);
+router.put('/operators/:id/toggle', toggleOperatorStatus);
 
 // Operator Details
 router.get('/operators/:id/companies', getOperatorCompanies);

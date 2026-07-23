@@ -8,8 +8,8 @@ const {
   updatePolicy,
   deletePolicy,
   getPolicyDropdown
-} = require('../controller/cancellationController');
-const { isAuthenticated } = require('../middleware/auth');
+} = require('../../controller/settings/cancellationController');
+const { isAuthenticated } = require('../../middleware/auth');
 
 router.use(isAuthenticated);
 

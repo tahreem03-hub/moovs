@@ -32,10 +32,10 @@ const Settings = () => {
     { id: 'terms', label: 'Terms & Conditions', icon: FileText },
     { id: 'drivers', label: 'Drivers', icon: Users },
     { id: 'members', label: 'Members', icon: UserPlus },
-    { id: 'zone-pricing', label: 'Zone Pricing', icon: MapPin },
+    //{ id: 'zone-pricing', label: 'Zone Pricing', icon: MapPin },
     { id: 'trip-rules', label: 'Trip Rules', icon: Route },
-    { id: 'website', label: 'Website', icon: Globe },
-    { id: 'moovs-market', label: 'Moovs Market', icon: ShoppingBag },
+    //{ id: 'website', label: 'Website', icon: Globe },
+    //{ id: 'moovs-market', label: 'Moovs Market', icon: ShoppingBag },
     { id: 'billing', label: 'Billing & Plans', icon: CreditCard },
     { id: 'academy', label: 'Moovs Academy', icon: GraduationCap },
   ];

@@ -34,7 +34,7 @@ export const deleteOperator = (id) =>
   api.delete(`/admin/operators/${id}`);
 
 export const toggleOperatorStatus = (id) => 
-  api.patch(`/admin/operators/${id}/toggle`);
+  api.put(`/admin/operators/${id}/toggle`);
 
 // ============ OPERATOR DETAILS ============
 export const getOperatorCompanies = (id) => 

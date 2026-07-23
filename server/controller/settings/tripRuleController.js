@@ -1,6 +1,6 @@
 // controllers/tripRuleController.js
 const mongoose = require('mongoose');
-const TripRule = require('../models/settings/TripRule');
+const TripRule = require('../../models/settings/TripRule');
 
 // Create Trip Rule
 const createTripRule = async (req, res) => {

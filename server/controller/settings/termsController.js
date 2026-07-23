@@ -1,6 +1,6 @@
 // controllers/termsController.js
 const mongoose = require('mongoose');
-const TermsAndConditions = require('../models/settings/TermsAndConditions');
+const TermsAndConditions = require('../../models/settings/TermsAndConditions');
 
 // Create Terms
 const createTerms = async (req, res) => {

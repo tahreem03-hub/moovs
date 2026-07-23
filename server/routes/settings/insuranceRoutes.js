@@ -8,8 +8,8 @@ const {
   updateInsurance,
   deleteInsurance,
   getInsuranceDropdown
-} = require('../controller/insuranceController');
-const { isAuthenticated } = require('../middleware/auth');
+} = require('../../controller/settings/insuranceController');
+const { isAuthenticated } = require('../../middleware/auth');
 
 router.use(isAuthenticated);
 

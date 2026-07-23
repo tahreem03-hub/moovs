@@ -8,8 +8,8 @@ const {
   getTermsById,
   updateTerms,
   deleteTerms
-} = require('../controller/termsController');
-const { isAuthenticated } = require('../middleware/auth');
+} = require('../../controller/settings/termsController');
+const { isAuthenticated } = require('../../middleware/auth');
 
 router.use(isAuthenticated);
 

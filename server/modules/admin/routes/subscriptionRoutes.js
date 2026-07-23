@@ -33,7 +33,7 @@ router.get('/plans', getPlans);
 router.get('/plans/:id', getPlanById);
 router.put('/plans/:id', updatePlan);
 router.delete('/plans/:id', deletePlan);
-router.patch('/plans/:id/default', setDefaultPlan);
+router.put('/plans/:id/default', setDefaultPlan);
 
 // Subscription Stats
 router.get('/stats', getSubscriptionStats);

@@ -61,6 +61,11 @@ const App = () => {
             <Route path="/quotes/create" element={<Quotes />} />
 
             <Route path='/reservations' element={<Reservations />} />
+            <Route path="/reservations" element={<Reservations />} />
+            <Route path="/reservations/create" element={<Reservations />} />
+
+
+
             <Route path='/dispatch' element={<Dispatch />} />
             <Route path='/driver-tracking' element={<DriverTracking />} />
 
@@ -87,8 +92,11 @@ const App = () => {
             <Route path='/crm' element={<CRM />} />
 
 
-            <Route path="/quotes/:id" element={<Quotes />} />
             <Route path="/quotes/edit/:id" element={<Quotes />} />
+            <Route path="/quotes/:id" element={<Quotes />} />
+
+            <Route path="/reservations/edit/:id" element={<Reservations />} />
+            <Route path="/reservations/:id" element={<Reservations />} />
 
 
 
@@ -130,7 +138,7 @@ const App = () => {
             <Route path="/admin/operators" element={<Operators />} />
             <Route path="/admin/plans" element={<Plans />} />
             <Route path="/admin/operators/create" element={<Operators />} />
-            <Route path='/admin/subscriptions' element={<Subscriptions/>}/>
+            <Route path='/admin/subscriptions' element={<Subscriptions />} />
             <Route path="/admin/operators/:id" element={<OperatorDetail />} />
             <Route path="/admin/operators/:id/edit" element={<Operators />} />
           </Route>

@@ -1,6 +1,6 @@
 // controllers/insuranceController.js
 const mongoose = require('mongoose');
-const Insurance = require('../models/settings/Insurance');
+const Insurance = require('../../models/settings/Insurance');
 
 // Create Insurance
 const createInsurance = async (req, res) => {

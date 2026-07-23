@@ -17,7 +17,7 @@ export const getPlanById = (id) => api.get(`/admin/subscriptions/plans/${id}`);
 export const createPlan = (data) => api.post('/admin/subscriptions/plans', data);
 export const updatePlan = (id, data) => api.put(`/admin/subscriptions/plans/${id}`, data);
 export const deletePlan = (id) => api.delete(`/admin/subscriptions/plans/${id}`);
-export const setDefaultPlan = (id) => api.patch(`/admin/subscriptions/plans/${id}/default`);
+export const setDefaultPlan = (id) => api.put(`/admin/subscriptions/plans/${id}/default`);
 
 // ============ SUBSCRIPTION STATS ============
 export const getSubscriptionStats = () => api.get('/admin/subscriptions/stats');

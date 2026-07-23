@@ -8,8 +8,8 @@ const {
   updateMember,
   deleteMember,
   getMemberDropdown
-} = require('../controller/memberController');
-const { isAuthenticated } = require('../middleware/auth');
+} = require('../../controller/settings/memberController');
+const { isAuthenticated } = require('../../middleware/auth');
 
 router.use(isAuthenticated);
 

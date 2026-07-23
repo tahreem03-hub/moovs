@@ -9,8 +9,8 @@ const {
   deleteTripRule,
   toggleTripRuleStatus,
   getTripRuleDropdown
-} = require('../controller/tripRuleController');
-const { isAuthenticated } = require('../middleware/auth');
+} = require('../../controller/settings/tripRuleController');
+const { isAuthenticated } = require('../../middleware/auth');
 
 router.use(isAuthenticated);
 
@@ -19,7 +19,7 @@ router.get('/list', getTripRules);
 router.get('/dropdown', getTripRuleDropdown);
 router.get('/:id', getTripRuleById);
 router.put('/update/:id', updateTripRule);
-router.patch('/toggle/:id', toggleTripRuleStatus);
+router.put('/toggle/:id', toggleTripRuleStatus);
 router.delete('/delete/:id', deleteTripRule);
 
 module.exports = router;

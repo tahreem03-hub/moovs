@@ -1,8 +1,8 @@
 // controllers/customerPortalController.js
 const mongoose = require('mongoose');
-const CompanyProfile = require('../models/settings/CompanyProfile');
-const TermsAndConditions = require('../models/settings/TermsAndConditions');
-const Vehicle = require('../models/Vehicle');
+const CompanyProfile = require('../../models/settings/CompanyProfile');
+const TermsAndConditions = require('../../models/settings/TermsAndConditions');
+const Vehicle = require('../../models/Vehicle');
 const fs = require('fs');
 const path = require('path');
 

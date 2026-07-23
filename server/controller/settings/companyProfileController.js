@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const CompanyProfile = require('../models/settings/CompanyProfile');
+const CompanyProfile = require('../../models/settings/CompanyProfile');
 const fs = require('fs');
 const path = require('path');
 

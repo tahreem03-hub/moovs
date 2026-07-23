@@ -31,7 +31,7 @@ const TripRules = () => {
 
   const handleToggle = async (id, currentStatus) => {
     try {
-      const response = await axios.patch(
+      const response = await axios.put(
         `${import.meta.env.VITE_URL}/trip-rules/toggle/${id}`
       );
       toast.success(response.data.message);

@@ -1,6 +1,6 @@
 // controllers/cancellationController.js
 const mongoose = require('mongoose');
-const CancellationPolicy = require('../models/settings/CancellationPolicy')
+const CancellationPolicy = require('../../models/settings/CancellationPolicy')
 
 const createPolicy = async (req, res) => {
   try {
