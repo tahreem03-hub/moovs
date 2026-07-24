@@ -11,7 +11,7 @@ const { adminRoutes, subscriptionRoutes } = require('./modules/admin');
 
 // CORS HERE - BEFORE ANY ROUTES
 app.use(cors({
-  origin: 'http://localhost:5174', // Your frontend URL
+  origin: 'http://localhost:5173', // Your frontend URL
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
@@ -29,6 +29,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const userRouter = require('./routes/user')
 const quoteRouter = require('./routes/quote')
 const reservationRoutes = require('./routes/reservationRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 const dispatchRoutes = require('./routes/dispatchRoutes');
 const driverTrackingRoutes = require('./routes/driverTrackingRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
@@ -44,6 +45,7 @@ const billingAdminRoutes = require('./modules/admin/routes/billingAdminRoutes');
 app.use('/user', userRouter);
 app.use('/quote', quoteRouter);
 app.use('/reservation', reservationRoutes);
+app.use('/payment', paymentRoutes);
 app.use('/dispatch', dispatchRoutes);
 app.use('/driver-tracking', driverTrackingRoutes);
 app.use('/vehicle', vehicleRouter);

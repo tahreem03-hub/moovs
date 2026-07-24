@@ -8,7 +8,7 @@ router.use(isAuthenticated);
 
 router.post('/create', createPayable);
 router.get('/list', getPayables);
-router.patch('/:id/status', updatePayableStatus);
+router.put('/:id/status', updatePayableStatus);
 router.delete('/:id', deletePayable);
 
 module.exports = router;

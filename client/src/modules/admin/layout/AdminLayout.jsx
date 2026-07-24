@@ -8,7 +8,7 @@ const NAV = [
   { to: '/admin/operators', label: 'Operators', icon: Users, end: false },
   { to: '/admin/subscriptions', label: 'Subscriptions', icon: CreditCard, end: false },
   { to: '/admin/plans', label: 'Plans', icon: Crown, end: false },
-
+  { to: '/admin/pending-requests', label: 'Payment Requests', icon: CreditCard, end: false },
 ];
 
 

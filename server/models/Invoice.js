@@ -54,7 +54,7 @@ invoiceSchema.pre('save', async function(next) {
     const year = new Date().getFullYear().toString().slice(-2);
     this.invoiceNumber = `INV-${year}-${String(count + 1).padStart(4, '0')}`;
   }
-  next();
+  //next();
 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

@@ -8,6 +8,7 @@ import Login from './pages/Login'
 import Quotes from './pages/Quotes';
 import Layout from './pages/Layout';
 import Reservations from './pages/Reservations';
+import PaymentLink from './pages/PaymentLink';
 import Dispatch from './pages/Dispatch';
 import DriverTracking from './pages/DriverTracking';
 import Vehicles from './pages/Vehicles';
@@ -34,6 +35,8 @@ import MoovsMarket from './components/settings/MoovsMarket';
 import Billing from './components/settings/Billing';
 import Academy from './components/settings/Academy';
 import TripRuleForm from './components/settings/TripRuleForm';
+import InvoiceView from './components/Invoice/InvoiceView';
+import PaymentSuccess from './pages/PaymentSuccess';
 
 
 import ProtectedRoute from './shared/ProtectedRoute';
@@ -41,8 +44,7 @@ import AdminLayout from './modules/admin/layout/AdminLayout';
 import { AdminDashboard, Operators, OperatorDetail } from './modules/admin';
 import Plans from './modules/admin/pages/Plans';
 import Subscriptions from './modules/admin/pages/Subscriptions';
-
-
+import PendingRequests from './modules/admin/pages/PendingRequests';
 
 
 const App = () => {
@@ -99,6 +101,13 @@ const App = () => {
             <Route path="/reservations/:id" element={<Reservations />} />
 
 
+            <Route path="/pay/:token" element={<PaymentLink />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+
+
+
+            <Route path="/invoices/:id" element={<InvoiceView />} />
+
 
           </Route>
 
@@ -141,6 +150,8 @@ const App = () => {
             <Route path='/admin/subscriptions' element={<Subscriptions />} />
             <Route path="/admin/operators/:id" element={<OperatorDetail />} />
             <Route path="/admin/operators/:id/edit" element={<Operators />} />
+
+<Route path="/admin/pending-requests" element={<PendingRequests />} />
           </Route>
         </Route>
 

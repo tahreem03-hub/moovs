@@ -28,7 +28,7 @@ const Payables = () => {
 
   const updateStatus = async (id, status) => {
     try {
-      await axios.patch(`${import.meta.env.VITE_URL}/payable/${id}/status`, { status }, { withCredentials: true });
+      await axios.put(`${import.meta.env.VITE_URL}/payable/${id}/status`, { status }, { withCredentials: true });
       toast.success(`Payable ${status}`);
       fetchPayables();
     } catch (error) {

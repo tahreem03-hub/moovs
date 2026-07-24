@@ -37,7 +37,7 @@ const Invoices = () => {
 
   const updateStatus = async (id, status) => {
     try {
-      await axios.patch(`${import.meta.env.VITE_URL}/invoice/${id}/status`, { status }, {
+      await axios.put(`${import.meta.env.VITE_URL}/invoice/${id}/status`, { status }, {
         withCredentials: true
       });
       toast.success(`Invoice ${status}`);

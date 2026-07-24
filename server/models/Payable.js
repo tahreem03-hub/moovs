@@ -36,7 +36,7 @@ payableSchema.pre('save', async function(next) {
     const year = new Date().getFullYear().toString().slice(-2);
     this.payableNumber = `PAY-${year}-${String(count + 1).padStart(4, '0')}`;
   }
-  next();
+  //next();
 });
 
 module.exports = mongoose.model('Payable', payableSchema);
