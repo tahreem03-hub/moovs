@@ -12,6 +12,8 @@ const { adminRoutes, subscriptionRoutes } = require('./modules/admin');
 // CORS HERE - BEFORE ANY ROUTES
 app.use(cors({
   origin: 'http://localhost:5173', // Your frontend URL
+  origin: 'http://localhost:5174', // Your frontend URL
+  origin: 'http://localhost:5175', // Your frontend URL
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
