@@ -26,7 +26,7 @@ const createUser = async (req, res, next) => {
             email,
             password,
             CompanyName,
-            // ✅ Self-registered user - createdBy is null
+            // Self-registered user - createdBy is null
             createdBy: null,
             role: 'user',
             isActive: true,
@@ -35,7 +35,7 @@ const createUser = async (req, res, next) => {
         };
 
         const newUser = await User.create(user);
-        sendToken(newUser, 201, res);
+        sendToken(newUser, 201, res, "Registeration Successfull! Login to proceed.");
 
     } catch (error) {
         return next(new ErrorHandler(error.message, 400));
@@ -52,7 +52,7 @@ const loginUser = async (req, res, next) => {
             return next(new ErrorHandler("User not found", 400));
         }
 
-        // ✅ Check if user is active
+        // Check if user is active
         if (!user.isActive) {
             return next(new ErrorHandler("Your account has been deactivated. Please contact support.", 403));
         }
@@ -102,7 +102,7 @@ const createOperatorByAdmin = async (req, res, next) => {
             phone: phone || '',
             role: 'user',
             isActive: true,
-            createdBy: req.user._id,  // ✅ Admin's ID
+            createdBy: req.user._id,  // Admin's ID
             subscriptionPlan: subscriptionPlan || 'free',
             subscriptionStatus: subscriptionStatus || 'trial'
         });

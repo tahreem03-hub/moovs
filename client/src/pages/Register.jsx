@@ -39,6 +39,7 @@ const Register = () => {
                 setEmail("");
                 setPassword("");
                 setConfirmPassword("")
+                navigate('/login')
             } else {
                 toast.error("Unexpected response from server.")
             }

@@ -13,22 +13,17 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         try {
             const user = {
                 email,
                 password,
 
             };
-
-
             const response = await axios.post(
                 `${import.meta.env.VITE_URL}/user/login`,
                 user,
                 { withCredentials: true, }
             );
-
-
 
             if (response.data.success) {
                 toast.success(response.data.message);
@@ -39,7 +34,6 @@ const Login = () => {
             }
 
         } catch (error) {
-              console.log(error.response?.data); 
             toast.error(error.response?.data?.message || error.message);
         }
     };
