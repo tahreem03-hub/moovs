@@ -1,6 +1,13 @@
 const mongoose = require('mongoose');
 
 const driverSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    unique: true,
+    sparse: true,
+    index: true
+  },
   firstName: {
     type: String,
     required: [true, 'First name is required'],
@@ -52,6 +59,12 @@ const driverSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  operator: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -59,5 +72,9 @@ const driverSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Add unique constraints per operator
+driverSchema.index({ phone: 1, operator: 1 }, { unique: true });
+driverSchema.index({ email: 1, operator: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Driver', driverSchema);

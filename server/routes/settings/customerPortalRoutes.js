@@ -8,11 +8,13 @@ const {
   updateBranding,
   updatePromoCodes,
   getVehiclesForDropdown
-} = require('../../controller/settings/customerPortalController');
-const { isAuthenticated } = require('../../middleware/auth');
+} = require('../../controllers/settings/customerPortalController');
+const { isAuthenticated, authorizeOperator } = require('../../middleware/auth');
 const upload = require('../../middleware/multer');
 
+// All routes require authentication + operator role
 router.use(isAuthenticated);
+router.use(authorizeOperator);
 
 // Get all settings
 router.get('/', getCustomerPortalSettings);

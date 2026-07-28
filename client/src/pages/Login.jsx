@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast'
 import axios from 'axios'
 import { useAuth } from "../context/AuthContext";
+
 const Login = () => {
     const { loadUser } = useAuth();
 
@@ -17,12 +18,12 @@ const Login = () => {
             const user = {
                 email,
                 password,
-
             };
+            
             const response = await axios.post(
                 `${import.meta.env.VITE_URL}/user/login`,
                 user,
-                { withCredentials: true, }
+                { withCredentials: true }
             );
 
             if (response.data.success) {
@@ -30,16 +31,54 @@ const Login = () => {
                 setEmail("");
                 setPassword("");
                 const me = await loadUser();
-                navigate(me?.role === "admin" ? "/admin" : "/quotes");
+                
+                if (me?.role === "admin") {
+                    navigate("/admin");
+                } else if (me?.role === "operator") {
+                    navigate("/operator/dashboard");
+                } else if (me?.role === "driver") {
+                    navigate("/driver/dashboard");
+                } else {
+                    navigate("/quotes");
+                }
             }
 
         } catch (error) {
-            toast.error(error.response?.data?.message || error.message);
+            // If regular login fails, try driver login
+            if (error.response?.status === 401 || error.response?.status === 404) {
+                try {
+                    const driverResponse = await axios.post(
+                        `${import.meta.env.VITE_URL}/driver/login`,
+                        { email, password },
+                        { withCredentials: true } // This should set cookies
+                    );
+
+                    if (driverResponse.data.success) {
+                        toast.success(driverResponse.data.message);
+                        setEmail("");
+                        setPassword("");
+                        
+                        // Load user using the existing cookie-based auth
+                        const me = await loadUser();
+                        console.log("Driver user:", me);
+                        
+                        if (me?.role === "driver") {
+                            navigate("/driver/dashboard");
+                        } else {
+                            toast.error("Driver login failed. Please try again.");
+                        }
+                    }
+                } catch (driverError) {
+                    toast.error(driverError.response?.data?.message || "Invalid credentials");
+                }
+            } else {
+                toast.error(error.response?.data?.message || error.message);
+            }
         }
     };
+
     return (
         <div className='bg-sky-200/50 flex flex-col md:flex-row'>
-
 
             {/* left side */}
             <div className='relative bg-gray-900 rounded-3xl p-10 m-8 overflow-hidden max-w-175'>
@@ -48,8 +87,6 @@ const Login = () => {
 
                 <div className='bg-blue-300/30 rounded-full absolute -top-20 -right-20 h-80 w-80'></div>
 
-
-                {/* why flex worked when written in div instead of icon */}
                 <div className='rounded-2xl border border-gray-500/80 bg-gray-700 h-17 w-17 flex items-center justify-center mb-7'>
                     <Crown className='w-6 h-6 text-white ' />
                 </div>
@@ -77,11 +114,9 @@ const Login = () => {
                     <p className='text-white/70 ml-3 font-medium'>Stay on top of invoices and follow-ups without switching tools.</p>
                 </div>
 
-
             </div>
 
             {/* right side form */}
-            {/* when i remove py it did no =t get centenred with flex rpoperties what's making its width when width is not even defined */}
             <div className='bg-white rounded-3xl flex flex-col justify-center m-8 md:my-8 md:mx-0 py-5 px-20 w-auto h-auto'>
 
                 <div>
@@ -143,7 +178,6 @@ const Login = () => {
                     <div className='mt-2 flex flex-col'>
                         <h1 className='text-gray-600'>New Here? <span className='text-blue-600 font-bold' onClick={() => navigate('/register')}>Create an account</span></h1>
                     </div>
-
 
                 </form>
 

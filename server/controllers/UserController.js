@@ -26,16 +26,15 @@ const createUser = async (req, res, next) => {
             email,
             password,
             CompanyName,
-            // Self-registered user - createdBy is null
             createdBy: null,
-            role: 'user',
+            role: 'user',  // ✅ Default operator role
             isActive: true,
             subscriptionPlan: 'free',
             subscriptionStatus: 'trial'
         };
 
         const newUser = await User.create(user);
-        sendToken(newUser, 201, res, "Registeration Successfull! Login to proceed.");
+        sendToken(newUser, 201, res, "Registration Successful! Login to proceed.");
 
     } catch (error) {
         return next(new ErrorHandler(error.message, 400));
@@ -52,7 +51,6 @@ const loginUser = async (req, res, next) => {
             return next(new ErrorHandler("User not found", 400));
         }
 
-        // Check if user is active
         if (!user.isActive) {
             return next(new ErrorHandler("Your account has been deactivated. Please contact support.", 403));
         }
@@ -86,13 +84,11 @@ const createOperatorByAdmin = async (req, res, next) => {
     try {
         const { Fname, Lname, email, CompanyName, password, phone, subscriptionPlan, subscriptionStatus } = req.body;
 
-        // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return next(new ErrorHandler("User already exists", 400));
         }
 
-        // Create operator with admin as creator
         const operator = await User.create({
             Fname,
             Lname,
@@ -102,7 +98,7 @@ const createOperatorByAdmin = async (req, res, next) => {
             phone: phone || '',
             role: 'user',
             isActive: true,
-            createdBy: req.user._id,  // Admin's ID
+            createdBy: req.user._id,
             subscriptionPlan: subscriptionPlan || 'free',
             subscriptionStatus: subscriptionStatus || 'trial'
         });
@@ -129,7 +125,6 @@ const updateOperatorByAdmin = async (req, res, next) => {
             return next(new ErrorHandler("Operator not found", 404));
         }
 
-        // Update fields
         if (Fname) operator.Fname = Fname;
         if (Lname) operator.Lname = Lname;
         if (email) {
@@ -168,12 +163,10 @@ const deleteOperatorByAdmin = async (req, res, next) => {
             return next(new ErrorHandler("Operator not found", 404));
         }
 
-        // Prevent deleting self
         if (operator._id.toString() === req.user._id.toString()) {
             return next(new ErrorHandler("You cannot delete yourself", 400));
         }
 
-        // Prevent deleting last admin
         if (operator.role === 'admin') {
             const adminCount = await User.countDocuments({ role: 'admin' });
             if (adminCount <= 1) {

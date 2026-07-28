@@ -5,22 +5,12 @@ const {
   getPendingRequests,
   approveRequest,
   rejectRequest
-} = require('../../../controller/settings/billingController');
-const { isAuthenticated } = require('../../../middleware/auth');
+} = require('../../../controllers/settings/billingController');
+const { isAuthenticated, authorizeAdmin } = require('../../../middleware/auth');
 
-// All routes require authentication
+// All admin routes require authentication + admin role
 router.use(isAuthenticated);
-
-// Admin role check
-router.use(async (req, res, next) => {
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({
-      success: false,
-      message: 'Access denied. Admin only.'
-    });
-  }
-  next();
-});
+router.use(authorizeAdmin);
 
 // Pending payment requests
 router.get('/pending-requests', getPendingRequests);

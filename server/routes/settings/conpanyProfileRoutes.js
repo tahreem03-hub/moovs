@@ -19,12 +19,13 @@ const {
   updateCustomerPortalBranding,
   getCustomerPortalPromoCodes,
   updateCustomerPortalPromoCodes
-} = require('../../controller/settings/companyProfileController');
-const { isAuthenticated } = require('../../middleware/auth');
+} = require('../../controllers/settings/companyProfileController');
+const { isAuthenticated, authorizeOperator } = require('../../middleware/auth');
 const upload = require('../../middleware/multer');
 
-// All routes require authentication
+// All routes require authentication + operator role
 router.use(isAuthenticated);
+router.use(authorizeOperator);
 
 // ============ COMPANY TAB ============
 router.get('/profile', getCompanyProfile);

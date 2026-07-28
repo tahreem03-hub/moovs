@@ -7,10 +7,12 @@ const {
   getCompanyById,
   updateCompany,
   deleteCompany,
-} = require('../controller/companyController');
-const { isAuthenticated } = require('../middleware/auth');
+} = require('../controllers/companyController');
+const { isAuthenticated, authorizeOperator } = require('../middleware/auth');
 
+// All routes require authentication + operator role
 router.use(isAuthenticated);
+router.use(authorizeOperator);
 
 router.post('/create', upload.single('photo'), createCompany);
 

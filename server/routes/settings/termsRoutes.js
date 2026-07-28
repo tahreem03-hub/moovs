@@ -8,10 +8,12 @@ const {
   getTermsById,
   updateTerms,
   deleteTerms
-} = require('../../controller/settings/termsController');
-const { isAuthenticated } = require('../../middleware/auth');
+} = require('../../controllers/settings/termsController');
+const { isAuthenticated, authorizeOperator } = require('../../middleware/auth');
 
+// All routes require authentication + operator role
 router.use(isAuthenticated);
+router.use(authorizeOperator);
 
 router.post('/create', createTerms);
 router.get('/list', getTerms);

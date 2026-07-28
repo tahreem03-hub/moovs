@@ -9,17 +9,19 @@ const {
   deleteTripRule,
   toggleTripRuleStatus,
   getTripRuleDropdown
-} = require('../../controller/settings/tripRuleController');
-const { isAuthenticated } = require('../../middleware/auth');
+} = require('../../controllers/settings/tripRuleController');
+const { isAuthenticated, authorizeOperator } = require('../../middleware/auth');
 
+// All routes require authentication + operator role
 router.use(isAuthenticated);
+router.use(authorizeOperator);
 
 router.post('/create', createTripRule);
 router.get('/list', getTripRules);
 router.get('/dropdown', getTripRuleDropdown);
 router.get('/:id', getTripRuleById);
 router.put('/update/:id', updateTripRule);
-router.put('/toggle/:id', toggleTripRuleStatus);
+router.put('/toggle/:id', toggleTripRuleStatus);  
 router.delete('/delete/:id', deleteTripRule);
 
 module.exports = router;

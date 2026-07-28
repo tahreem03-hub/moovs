@@ -11,11 +11,12 @@ const {
   getQuoteStats,
   addInternalComment,
   calculatePricing
-} = require('../controller/quoteController');
-const { isAuthenticated } = require('../middleware/auth');
+} = require('../controllers/quoteController');
+const { isAuthenticated, authorizeOperator } = require('../middleware/auth');
 
-// All routes require authentication
+// All routes require authentication + operator role
 router.use(isAuthenticated);
+router.use(authorizeOperator);
 
 // Stats & Pricing
 router.get('/stats', getQuoteStats);
@@ -26,7 +27,7 @@ router.post('/create', createQuote);
 router.get('/list', getQuotes);
 router.get('/:id', getQuoteById);
 router.put('/update/:id', updateQuote);
-router.put('/:id/status', updateQuoteStatus);
+router.patch('/:id/status', updateQuoteStatus);  // ✅ Changed PUT to PATCH
 router.delete('/delete/:id', deleteQuote);
 
 // Internal Comments

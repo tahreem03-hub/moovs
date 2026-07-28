@@ -8,10 +8,12 @@ const {
   updateInsurance,
   deleteInsurance,
   getInsuranceDropdown
-} = require('../../controller/settings/insuranceController');
-const { isAuthenticated } = require('../../middleware/auth');
+} = require('../../controllers/settings/insuranceController');
+const { isAuthenticated, authorizeOperator } = require('../../middleware/auth');
 
+// All routes require authentication + operator role
 router.use(isAuthenticated);
+router.use(authorizeOperator);
 
 router.post('/create', createInsurance);
 router.get('/list', getInsurances);

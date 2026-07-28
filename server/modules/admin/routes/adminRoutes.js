@@ -13,20 +13,11 @@ const {
   getOperatorVehicles,
   getSubscriptionStats
 } = require('../controllers/adminController');
-const { isAuthenticated } = require('../../../middleware/auth');
+const { isAuthenticated, authorizeAdmin } = require('../../../middleware/auth');
 
+// All admin routes require authentication + admin role
 router.use(isAuthenticated);
-
-// Admin role check
-router.use(async (req, res, next) => {
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({
-      success: false,
-      message: 'Access denied. Admin only.'
-    });
-  }
-  next();
-});
+router.use(authorizeAdmin);
 
 // Dashboard
 router.get('/stats', getDashboardStats);

@@ -55,9 +55,10 @@ const userSchema = new mongoose.Schema({
         type: Date
     },
 
+    // Added driver and customer roles
     role: {
         type: String,
-        enum: ['user', 'admin'],
+        enum: ['user', 'admin', 'driver', 'customer'],
         default: 'user'
     },
 
@@ -74,10 +75,11 @@ const userSchema = new mongoose.Schema({
 // Hash password before saving
 userSchema.pre("save", async function (next) {
     if (!this.isModified("password")) {
-        return;
+        return next();
     }
     this.password = await bcrypt.hash(this.password, 10);
-})
+    //next();
+});
 
 userSchema.methods.getJwtToken = function () {
     return jwt.sign({ id: this._id }, process.env.JWT_SECRET_KEY, {

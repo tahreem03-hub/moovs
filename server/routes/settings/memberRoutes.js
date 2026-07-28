@@ -8,10 +8,12 @@ const {
   updateMember,
   deleteMember,
   getMemberDropdown
-} = require('../../controller/settings/memberController');
-const { isAuthenticated } = require('../../middleware/auth');
+} = require('../../controllers/settings/memberController');
+const { isAuthenticated, authorizeOperator } = require('../../middleware/auth');
 
+// All routes require authentication + operator role
 router.use(isAuthenticated);
+router.use(authorizeOperator);
 
 router.post('/create', createMember);
 router.get('/list', getMembers);

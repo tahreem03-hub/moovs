@@ -1,16 +1,27 @@
-
 const adminService = require('../services/adminService');
 const subscriptionService = require('../services/subscriptionService');
 const Company = require('../../../models/Company');
 const Vehicle = require('../../../models/Vehicle');
+const User = require('../../../models/User');
+const Driver = require('../../../models/settings/Driver');
+const Contact = require('../../../models/Contact');
 
 // ============ DASHBOARD STATS ============
 const getDashboardStats = async (req, res) => {
   try {
     const stats = await adminService.getDashboardStats();
+    
+    // Get platform-wide counts (not filtered by operator)
+    const totalDrivers = await Driver.countDocuments();
+    const totalCustomers = await User.countDocuments({ role: 'customer' });
+    
     return res.status(200).json({
       success: true,
-      data: stats
+      data: {
+        ...stats,
+        totalDrivers,
+        totalCustomers
+      }
     });
   } catch (error) {
     console.error('Get dashboard stats error:', error);
@@ -41,7 +52,6 @@ const getSubscriptionStats = async (req, res) => {
   }
 };
 
-// ... rest of your controller functions
 // ============ OPERATOR MANAGEMENT ============
 const getOperators = async (req, res) => {
   try {
@@ -205,5 +215,5 @@ module.exports = {
   toggleOperatorStatus,
   getOperatorCompanies,
   getOperatorVehicles,
-  getSubscriptionStats  
+  getSubscriptionStats,
 };

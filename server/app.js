@@ -5,18 +5,29 @@ const app = express();
 const cors = require('cors')
 const errorHandler = require('./middleware/error')
 
-// Import modular admin routes
-const { adminRoutes, subscriptionRoutes } = require('./modules/admin');
 
 
 // CORS HERE - BEFORE ANY ROUTES
 app.use(cors({
-  origin: 'http://localhost:5173', // Your frontend URL
-  origin: 'http://localhost:5174', // Your frontend URL
-  origin: 'http://localhost:5175', // Your frontend URL
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:5175',
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With']
 }));
 
 // Then body parsers
@@ -26,6 +37,17 @@ app.use(cookieParser())
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
+// ============ IMPORT MODULES ============
+const { adminRoutes } = require('./modules/admin');
+const { driverRoutes } = require('./modules/driver');
+const { customerRoutes } = require('./modules/customer');
+
+
+// Import modular admin routes
+const { subscriptionRoutes } = require('./modules/admin');
+
 
 // THEN routes
 const userRouter = require('./routes/user')
@@ -76,6 +98,13 @@ app.use('/admin/billing', billingAdminRoutes);
 // Use routes
 app.use('/admin', adminRoutes);
 app.use('/admin/subscriptions', subscriptionRoutes);
+
+
+// Driver routes
+app.use('/driver', driverRoutes);
+
+// Customer routes
+app.use('/customer', customerRoutes);
 
 
 app.use(errorHandler);

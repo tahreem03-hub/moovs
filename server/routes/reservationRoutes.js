@@ -12,10 +12,12 @@ const {
   getReservationStats,
   deleteReservation,
   convertQuoteToReservation
-} = require('../controller/reservationController');
-const { isAuthenticated } = require('../middleware/auth');
+} = require('../controllers/reservationController');
+const { isAuthenticated, authorizeOperator } = require('../middleware/auth');
 
+// All routes require authentication + operator role
 router.use(isAuthenticated);
+router.use(authorizeOperator);
 
 // Stats
 router.get('/stats', getReservationStats);
@@ -35,14 +37,14 @@ router.get('/:id', getReservationById);
 // Update
 router.put('/update/:id', updateReservation);
 
-// Status
-router.put('/:id/status', updateReservationStatus);
+// Status - Changed PUT to PATCH
+router.patch('/:id/status', updateReservationStatus);
 
-// Driver assignment
-router.put('/:id/assign-driver', assignDriver);
+// Driver assignment - Changed PUT to PATCH
+router.patch('/:id/assign-driver', assignDriver);
 
-// Farm out
-router.put('/:id/farm-out', farmOutReservation);
+// Farm out - Changed PUT to PATCH
+router.patch('/:id/farm-out', farmOutReservation);
 
 // Delete
 router.delete('/delete/:id', deleteReservation);

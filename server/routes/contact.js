@@ -7,10 +7,12 @@ const {
   updateContact,
   deleteContact,
   getContactDropdown,
-} = require('../controller/contactController');
-const { isAuthenticated } = require('../middleware/auth');
+} = require('../controllers/contactController');
+const { isAuthenticated, authorizeOperator } = require('../middleware/auth');
 
+// All routes require authentication + operator role
 router.use(isAuthenticated);
+router.use(authorizeOperator);
 
 router.post('/create', createContact);
 

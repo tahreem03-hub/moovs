@@ -1,10 +1,12 @@
 // routes/payableRoutes.js
 const express = require('express');
 const router = express.Router();
-const { createPayable, getPayables, updatePayableStatus, deletePayable } = require('../controller/payabaleController');
-const { isAuthenticated } = require('../middleware/auth');
+const { createPayable, getPayables, updatePayableStatus, deletePayable } = require('../controllers/payabaleController');
+const { isAuthenticated, authorizeOperator } = require('../middleware/auth');
 
+// All routes require authentication + operator role
 router.use(isAuthenticated);
+router.use(authorizeOperator);
 
 router.post('/create', createPayable);
 router.get('/list', getPayables);
