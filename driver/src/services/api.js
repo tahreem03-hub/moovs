@@ -8,12 +8,14 @@ const api = axios.create({
   withCredentials: true, 
 });
 
+
 // Response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     // If unauthorized, redirect to main login
     if (error.response?.status === 401) {
+      console.log(error.response)
       window.location.href = '/login';
     }
     return Promise.reject(error);

@@ -25,8 +25,8 @@ const Login = () => {
                 navigate("/quotes");
                 break;
             case "driver":
-                navigate("/driver/dashboard");
-                break;
+                const driverAppUrl = import.meta.env.VITE_DRIVER_APP_URL || 'http://localhost:5174';
+               window.location.href = `${driverAppUrl}/driver/dashboard`;
             default:
                 navigate("/login");
         }
@@ -77,7 +77,7 @@ const Login = () => {
                         const me = await loadUser();
 
                         if (me?.role === "driver") {
-                            navigate("/driver/dashboard");
+                            redirectUser("driver");  
                         } else {
                             toast.error("Driver login failed. Please try again.");
                         }

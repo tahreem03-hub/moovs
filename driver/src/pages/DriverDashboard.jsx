@@ -5,7 +5,7 @@ import {
   DollarSign, Loader2, LogOut 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api  from '../services/api';
+import {driverApi}  from '../services/api';
 
 const DriverDashboard = () => {
   const [driver, setDriver] = useState(null);
@@ -28,9 +28,9 @@ const DriverDashboard = () => {
     try {
       setLoading(true);
       const [profileRes, statsRes, tripsRes] = await Promise.all([
-        api.getProfile(),
-        api.getStats(),
-        api.getTrips({ status: 'confirmed,dispatched,started' })
+        driverApi.getProfile(),
+        driverApi.getStats(),
+        driverApi.getTrips({ status: 'confirmed,dispatched,started' })
       ]);
 
       setDriver(profileRes.data.data);
@@ -47,7 +47,7 @@ const DriverDashboard = () => {
     try {
       setUpdatingAvailability(true);
       const newStatus = !stats.isAvailable;
-      await api.updateAvailability(newStatus);
+      await driverApi.updateAvailability(newStatus);
       setStats(prev => ({ ...prev, isAvailable: newStatus }));
       toast.success(`You are now ${newStatus ? 'available' : 'unavailable'}`);
     } catch (error) {
@@ -59,7 +59,7 @@ const DriverDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      await api.logout();
+      await driverApi.logout();
       toast.success('Logged out successfully');
       navigate('/driver/login');
     } catch (error) {

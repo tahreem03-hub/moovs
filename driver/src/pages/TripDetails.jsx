@@ -15,7 +15,7 @@ import {
   Navigation
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '../services/api'
+import driverApi from '../services/api'
 
 const TripDetails = () => {
   const { id } = useParams();
@@ -31,7 +31,7 @@ const TripDetails = () => {
   const loadTrip = async () => {
     try {
       setLoading(true);
-      const response = await api.getTripById(id);
+      const response = await driverApi.getTripById(id);
       setTrip(response.data.data);
     } catch (error) {
       toast.error('Failed to load trip details');
@@ -46,7 +46,7 @@ const TripDetails = () => {
     
     try {
       setActionLoading(true);
-      await api.startTrip(id);
+      await driverApi.startTrip(id);
       toast.success('Trip started!');
       await loadTrip();
     } catch (error) {
@@ -61,7 +61,7 @@ const TripDetails = () => {
     
     try {
       setActionLoading(true);
-      await api.completeTrip(id);
+      await driverApi.completeTrip(id);
       toast.success('Trip completed!');
       await loadTrip();
     } catch (error) {

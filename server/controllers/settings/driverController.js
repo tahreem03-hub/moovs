@@ -125,7 +125,6 @@ const createDriver = async (req, res) => {
                 });
                 
                 userId = user._id;
-                console.log('Created new user:', user.email);
             }
         }
 
@@ -158,7 +157,6 @@ const createDriver = async (req, res) => {
                     companyName: currentUser.CompanyName || 'MOOVS',
                     frontendUrl: req.headers.origin || process.env.FRONTEND_URL
                 });
-                console.log('Credentials email sent to:', user.email);
             } catch (emailError) {
                 console.error('Failed to send email:', emailError.message);
                 // Don't fail the driver creation if email fails

@@ -1,7 +1,7 @@
 // driver-app/src/components/ProtectedRoute.jsx
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import api from '../services/api';
+import { driverApi } from '../services/api';
 
 const ProtectedRoute = ({ children }) => {
   const [loading, setLoading] = useState(true);
@@ -10,7 +10,7 @@ const ProtectedRoute = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await api.getProfile();
+        const response = await driverApi.getProfile();
         const user = response.data?.user || response.data?.data;
         
         if (user?.role === 'driver') {
