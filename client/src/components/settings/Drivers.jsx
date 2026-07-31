@@ -39,7 +39,7 @@ const Drivers = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${import.meta.env.VITE_URL}/driver/list`
+        `${import.meta.env.VITE_URL}/settings/driver/list`
       );
       setDrivers(response.data.data || []);
     } catch (error) {
@@ -119,13 +119,13 @@ const Drivers = () => {
       let response;
       if (editingDriver) {
         response = await axios.put(
-          `${import.meta.env.VITE_URL}/driver/update/${editingDriver._id}`,
+          `${import.meta.env.VITE_URL}/settings/driver/update/${editingDriver._id}`,
           formDataToSend,
           { headers: { 'Content-Type': 'multipart/form-data' } }
         );
       } else {
         response = await axios.post(
-          `${import.meta.env.VITE_URL}/driver/create`,
+          `${import.meta.env.VITE_URL}/settings/driver/create`,
           formDataToSend,
           { headers: { 'Content-Type': 'multipart/form-data' } }
         );
@@ -182,7 +182,7 @@ const Drivers = () => {
 
     try {
       const response = await axios.delete(
-        `${import.meta.env.VITE_URL}/driver/delete/${id}`
+        `${import.meta.env.VITE_URL}/settings/driver/delete/${id}`
       );
       toast.success(response.data.message);
       fetchDrivers();
@@ -194,7 +194,7 @@ const Drivers = () => {
   const toggleAvailability = async (id, currentStatus) => {
     try {
       const response = await axios.put(
-        `${import.meta.env.VITE_URL}/driver/update/${id}`,
+        `${import.meta.env.VITE_URL}/settings/driver/update/${id}`,
         { isAvailable: !currentStatus }
       );
       toast.success(`Driver ${!currentStatus ? 'available' : 'unavailable'}`);

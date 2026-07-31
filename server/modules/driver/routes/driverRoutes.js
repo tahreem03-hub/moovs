@@ -2,7 +2,6 @@
 const express = require('express');
 const router = express.Router();
 const {
-  driverLogin,
   getDriverProfile,
   getDriverTrips,
   getDriverTripById,
@@ -15,8 +14,6 @@ const {
 } = require('../controllers/driverController');
 const { isAuthenticated, authorizeDriver } = require('../../../middleware/auth');
 
-// ============ PUBLIC ROUTES ============
-router.post('/auth/login', driverLogin);
 
 // ============ PROTECTED ROUTES (Driver only) ============
 router.use(isAuthenticated);

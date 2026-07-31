@@ -82,7 +82,7 @@ app.use('/crm', crmRoutes);
 app.use('/cancellation', cancellationRouter)
 app.use('/insurance', require('./routes/settings/insuranceRoutes'));
 app.use('/terms', require('./routes/settings/termsRoutes'));
-app.use('/driver', require('./routes/settings/driverRoutes'));
+app.use('/settings/driver', require('./routes/settings/driverRoutes'));
 app.use('/member', require('./routes/settings/memberRoutes'));
 app.use('/company-profile', require('./routes/settings/conpanyProfileRoutes'));
 app.use('/trip-rules', require('./routes/settings/tripRuleRoutes'));
@@ -100,7 +100,7 @@ app.use('/admin', adminRoutes);
 app.use('/admin/subscriptions', subscriptionRoutes);
 
 
-// Driver routes
+// Driver app routes
 app.use('/driver', driverRoutes);
 
 // Customer routes

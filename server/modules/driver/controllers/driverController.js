@@ -3,40 +3,6 @@ const Driver = require('../../../models/settings/Driver');
 const Reservation = require('../../../models/Reservation');
 const Vehicle = require('../../../models/Vehicle');
 
-// ============ AUTH ============
-const driverLogin = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    
-    // Find driver by email (using User model or separate Driver model)
-    // For now, assuming drivers are Users with role 'driver'
-    const user = await User.findOne({ email, role: 'driver' });
-    
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-    
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-    
-    const token = user.getJwtToken();
-    return res.status(200).json({
-      success: true,
-      token,
-      user: {
-        _id: user._id,
-        firstName: user.Fname,
-        lastName: user.Lname,
-        email: user.email,
-        role: user.role
-      }
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
 
 // ============ PROFILE ============
 const getDriverProfile = async (req, res) => {
@@ -276,7 +242,6 @@ const getDriverStats = async (req, res) => {
 };
 
 module.exports = {
-  driverLogin,
   getDriverProfile,
   getDriverTrips,
   getDriverTripById,
