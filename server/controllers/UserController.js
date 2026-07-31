@@ -34,7 +34,7 @@ const createUser = async (req, res, next) => {
         };
 
         const newUser = await User.create(user);
-        sendToken(newUser, 201, res, "Registration Successful! Login to proceed.");
+        sendToken(newUser, 201, res, "Registration Successful!");
 
     } catch (error) {
         return next(new ErrorHandler(error.message, 400));

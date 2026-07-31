@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { CalendarRange, CreditCard, Crown, ShieldCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast'
@@ -10,16 +10,37 @@ const Login = () => {
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const navigate = useNavigate()
+    const [rememberMe, setRememberMe] = useState(false);
+    const navigate = useNavigate();
+    // disable the login button while logging in
+    const [loading, setLoading] = useState(false);
+
+
+    const redirectUser = (role) => {
+        switch (role) {
+            case "admin":
+                navigate("/admin");
+                break;
+            case "user":
+                navigate("/quotes");
+                break;
+            case "driver":
+                navigate("/driver/dashboard");
+                break;
+            default:
+                navigate("/login");
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setLoading(true)
         try {
             const user = {
                 email,
                 password,
             };
-            
+
             const response = await axios.post(
                 `${import.meta.env.VITE_URL}/user/login`,
                 user,
@@ -31,15 +52,9 @@ const Login = () => {
                 setEmail("");
                 setPassword("");
                 const me = await loadUser();
-                
-                if (me?.role === "admin") {
-                    navigate("/admin");
-                } else if (me?.role === "operator") {
-                    navigate("/operator/dashboard");
-                } else if (me?.role === "driver") {
-                    navigate("/driver/dashboard");
-                } else {
-                    navigate("/quotes");
+
+                if (me) {
+                    redirectUser(me.role);
                 }
             }
 
@@ -57,11 +72,10 @@ const Login = () => {
                         toast.success(driverResponse.data.message);
                         setEmail("");
                         setPassword("");
-                        
+
                         // Load user using the existing cookie-based auth
                         const me = await loadUser();
-                        console.log("Driver user:", me);
-                        
+
                         if (me?.role === "driver") {
                             navigate("/driver/dashboard");
                         } else {
@@ -74,8 +88,22 @@ const Login = () => {
             } else {
                 toast.error(error.response?.data?.message || error.message);
             }
+        } finally {
+            setLoading(false);
         }
     };
+
+    useEffect(() => {
+        const checkUser = async () => {
+            const me = await loadUser();
+
+            if (me) {
+                redirectUser(me.role);
+            }
+        };
+
+        checkUser();
+    }, [navigate]);
 
     return (
         <div className='bg-sky-200/50 flex flex-col md:flex-row'>
@@ -156,27 +184,39 @@ const Login = () => {
                     <div className='my-3 flex justify-between'>
                         <div>
                             <input
-                                className='border border-gray-300 rounded-2xl w-5 py-3 '
                                 type="checkbox"
-                                name='remember-me' id='remember-me'
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)} />
+                                id="remember-me"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                            />
 
                             <label htmlFor="remember-me" className='text-sm text-gray-500 mb-2 pl-2'>Remeber Me</label>
 
                         </div>
-                        <span className='font-bold text-blue-600'
-                            onClick={() => navigate('/forgot-password')}>Forgot Password?</span>
-                    </div>
-
-                    <div className='mt-2 flex flex-col'>
                         <button
-                            className='h-12 rounded-2xl bg-blue-600 text-white text-md font-bold'
-                        >Login to dashboard</button>
+                            type="button"
+                            className="font-bold text-blue-600"
+                            onClick={() => navigate("/forgot-password")}
+                        >
+                            Forgot Password?
+                        </button>
                     </div>
 
                     <div className='mt-2 flex flex-col'>
-                        <h1 className='text-gray-600'>New Here? <span className='text-blue-600 font-bold' onClick={() => navigate('/register')}>Create an account</span></h1>
+                        <button disabled={loading}
+                            className='h-12 rounded-2xl bg-blue-600 text-white text-md font-bold'>
+                            {loading ? "Logging in..." : "Login to dashboard"}
+                        </button>
+                    </div>
+
+                    <div className='mt-2 flex flex-col'>
+                        <h1 className='text-gray-600'>New Here? <button
+                            type='button'
+                            className='text-blue-600 font-bold'
+                            onClick={() => navigate('/register')}>
+                            Create an account
+                        </button>
+                        </h1>
                     </div>
 
                 </form>

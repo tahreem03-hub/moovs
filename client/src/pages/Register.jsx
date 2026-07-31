@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { CalendarRange, CarFrontIcon, CreditCard, Crown, ShieldCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios'
 import { toast } from "react-hot-toast";
+import { useAuth } from '../context/AuthContext';
 const Register = () => {
 
     const [firstName, setFirstName] = useState("");
@@ -12,6 +13,24 @@ const Register = () => {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const navigate = useNavigate()
+
+    const { loadUser } = useAuth();
+
+    const redirectUser = (role) => {
+        switch (role) {
+            case "admin":
+                navigate("/admin");
+                break;
+            case "user":
+                navigate("/quotes");
+                break;
+            case "driver":
+                navigate("/driver/dashboard");
+                break;
+            default:
+                navigate("/login");
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -39,7 +58,6 @@ const Register = () => {
                 setEmail("");
                 setPassword("");
                 setConfirmPassword("")
-                navigate('/login')
             } else {
                 toast.error("Unexpected response from server.")
             }
@@ -50,6 +68,18 @@ const Register = () => {
         }
     }
 
+
+    useEffect(() => {
+        const checkUser = async () => {
+            const me = await loadUser();
+
+            if (me) {
+                redirectUser(me.role);
+            }
+        };
+
+        checkUser();
+    }, [navigate]);
     return (
         <div className='bg-sky-200/50 flex flex-col md:flex-row'>
 
