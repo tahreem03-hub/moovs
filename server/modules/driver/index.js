@@ -1,6 +1,14 @@
 // modules/driver/index.js
-const driverRoutes = require('./routes/driverRoutes');
+const express = require('express');
+const router = express.Router();
 
-module.exports = {
-  driverRoutes
-};
+const driverRoutes = require('./routes/driverRoutes');
+const documentRoutes = require('./routes/documentRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+
+// Mount both routes on the same router
+router.use(driverRoutes);
+router.use(documentRoutes);
+router.use(notificationRoutes);
+
+module.exports = router;

@@ -26,7 +26,7 @@ const Login = () => {
                 break;
             case "driver":
                 const driverAppUrl = import.meta.env.VITE_DRIVER_APP_URL || 'http://localhost:5174';
-               window.location.href = `${driverAppUrl}/driver/dashboard`;
+               window.location.href = `${driverAppUrl}/driver`;
             default:
                 navigate("/login");
         }

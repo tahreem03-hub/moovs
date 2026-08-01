@@ -1,8 +1,8 @@
 const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser')
-const app = express();
 const cors = require('cors')
+const app = express();
 const errorHandler = require('./middleware/error')
 
 
@@ -41,7 +41,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ============ IMPORT MODULES ============
 const { adminRoutes } = require('./modules/admin');
-const { driverRoutes } = require('./modules/driver');
+const driverModule = require('./modules/driver');
 const { customerRoutes } = require('./modules/customer');
 
 
@@ -100,8 +100,7 @@ app.use('/admin', adminRoutes);
 app.use('/admin/subscriptions', subscriptionRoutes);
 
 
-// Driver app routes
-app.use('/driver', driverRoutes);
+app.use('/driver', driverModule);
 
 // Customer routes
 app.use('/customer', customerRoutes);

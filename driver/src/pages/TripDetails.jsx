@@ -12,7 +12,12 @@ import {
   CheckCircle,
   Play,
   Loader2,
-  Navigation
+  Navigation,
+  Calendar,
+  ChevronRight,
+  CreditCard,
+  Package,
+  Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { driverApi } from '../services/api';
@@ -34,20 +39,19 @@ const TripDetails = () => {
       const response = await driverApi.getTripById(id);
       setTrip(response.data.data);
     } catch (error) {
-      toast.error('Failed to load trip details');
-      navigate('/dashboard');
+      toast.error('Couldn\'t load trip details');
+      navigate('/rides');
     } finally {
       setLoading(false);
     }
   };
 
   const handleStartTrip = async () => {
-    if (!confirm('Are you sure you want to start this trip?')) return;
-
+    if (!confirm('Start this trip?')) return;
     try {
       setActionLoading(true);
       await driverApi.startTrip(id);
-      toast.success('Trip started!');
+      toast.success('Trip started');
       await loadTrip();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to start trip');
@@ -58,11 +62,10 @@ const TripDetails = () => {
 
   const handleCompleteTrip = async () => {
     if (!confirm('Complete this trip?')) return;
-
     try {
       setActionLoading(true);
       await driverApi.completeTrip(id);
-      toast.success('Trip completed!');
+      toast.success('Trip completed');
       await loadTrip();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to complete trip');
@@ -73,16 +76,29 @@ const TripDetails = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="space-y-3">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-[120px] rounded-2xl border border-[#EEEFF2] bg-white animate-pulse motion-reduce:animate-none"
+          />
+        ))}
       </div>
     );
   }
 
   if (!trip) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Trip not found</p>
+      <div className="rounded-2xl border border-dashed border-[#E1E3E8] bg-white/60 px-6 py-16 text-center">
+        <Navigation className="mx-auto h-12 w-12 text-[#D6D9DF]" />
+        <p className="mt-3 text-[15px] font-medium text-[#14181F]">Trip not found</p>
+        <p className="mt-1 text-sm text-[#8A909C]">The trip you're looking for doesn't exist</p>
+        <button
+          onClick={() => navigate('/rides')}
+          className="mt-4 rounded-full bg-[#14181F] px-6 py-2 text-sm font-medium text-white transition hover:bg-[#2A2F38]"
+        >
+          Back to rides
+        </button>
       </div>
     );
   }
@@ -90,171 +106,330 @@ const TripDetails = () => {
   const canStart = ['confirmed', 'dispatched'].includes(trip.status);
   const canComplete = trip.status === 'started';
 
-  // Safely extract customer information
+  // Customer name
   const customerName = trip.bookingContact?.firstName && trip.bookingContact?.lastName
     ? `${trip.bookingContact.firstName} ${trip.bookingContact.lastName}`
-    : trip.bookingContact?.name || 'Unknown Customer';
+    : trip.bookingContact?.name || 'Unknown passenger';
 
-  // Fix: Handle phone number which might be an object with countryCode and number
-  let customerPhone = 'N/A';
-  if (trip.bookingContact) {
-    if (trip.bookingContact.phone) {
-      // If phone is an object with countryCode and number
-      if (typeof trip.bookingContact.phone === 'object' && trip.bookingContact.phone.number) {
-        customerPhone = trip.bookingContact.phone.number;
-      } 
-      // If phone is a string
-      else if (typeof trip.bookingContact.phone === 'string') {
-        customerPhone = trip.bookingContact.phone;
-      }
-    } 
-    // Fallback to bookingContact.number if phone doesn't exist
-    else if (trip.bookingContact.number) {
-      if (typeof trip.bookingContact.number === 'object' && trip.bookingContact.number.number) {
-        customerPhone = trip.bookingContact.number.number;
-      } else if (typeof trip.bookingContact.number === 'string') {
-        customerPhone = trip.bookingContact.number;
-      }
+  // Format phone
+  const formatPhone = (val) => {
+    if (!val) return null;
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object' && val.number) {
+      return val.countryCode ? `${val.countryCode} ${val.number}` : val.number;
     }
-  }
+    return null;
+  };
+  const customerPhone = formatPhone(trip.bookingContact?.phone) || 
+                        formatPhone(trip.bookingContact?.number) || 'N/A';
 
-  const pickupAddress = trip.pickupLocation?.address 
-    || trip.pickupLocation?.formattedAddress 
-    || 'Address not available';
+  // Get stop display
+  const getStopDisplay = (type) => {
+    const stop = trip.stops?.find((s) => s.type === type);
+    if (!stop) return '—';
 
-  const dropoffAddress = trip.dropoffLocation?.address 
-    || trip.dropoffLocation?.formattedAddress 
-    || 'Address not available';
+    if (stop.locationType === 'airport' && stop.airport) {
+      const a = stop.airport;
+      return [a.code, a.name].filter(Boolean).join(' · ') || 'Airport';
+    }
 
-  const pickupDateTime = trip.pickupDateTime 
-    ? new Date(trip.pickupDateTime).toLocaleString() 
-    : 'Date/Time not set';
+    const addr = stop.address;
+    if (addr) {
+      const parts = [
+        addr.street || addr.address || addr.formattedAddress,
+        addr.city,
+        addr.state
+      ].filter(Boolean);
+      if (parts.length) return parts.join(', ');
+    }
+    return '—';
+  };
 
-  const totalPrice = trip.pricing?.total || trip.totalPrice || 0;
+  const pickupAddress = getStopDisplay('pickup');
+  const dropoffAddress = getStopDisplay('dropoff');
 
-  // Safely extract vehicle information - handle case where vehicle might be an object or string
+  const pickupDateTime = trip.pickupDateTime
+    ? new Date(trip.pickupDateTime)
+    : null;
+  const dropoffDateTime = trip.dropoffDateTime
+    ? new Date(trip.dropoffDateTime)
+    : null;
+
+  const totalPrice = trip.pricing?.total ?? trip.totalPrice ?? 0;
+
+  // Vehicle display
   let vehicleDisplay = 'N/A';
   if (trip.vehicle) {
     if (typeof trip.vehicle === 'object') {
-      // If vehicle is an object, try to get name or display from it
       const vehicleName = trip.vehicle.name || trip.vehicle.model || trip.vehicle.make || 'Vehicle';
       const vehicleType = trip.vehicle.type || trip.vehicle.category || '';
       vehicleDisplay = vehicleType ? `${vehicleName} (${vehicleType})` : vehicleName;
     } else if (typeof trip.vehicle === 'string') {
-      // If vehicle is a string, display it directly
       vehicleDisplay = trip.vehicle;
     }
   }
 
+  const reservationNumber = trip.reservationNumber || trip._id?.slice(-6) || 'N/A';
+  const orderType = trip.orderType || trip.tripType || 'Standard';
+
+  // Status color mapping
+  const statusColors = {
+    completed: { bg: 'bg-[#0B5C48]/10', text: 'text-[#0B5C48]', dot: 'bg-[#0B5C48]' },
+    started: { bg: 'bg-[#2563EB]/10', text: 'text-[#2563EB]', dot: 'bg-[#2563EB]' },
+    dispatched: { bg: 'bg-[#4F46E5]/10', text: 'text-[#4F46E5]', dot: 'bg-[#4F46E5]' },
+    confirmed: { bg: 'bg-[#B8860B]/10', text: 'text-[#B8860B]', dot: 'bg-[#B8860B]' },
+    cancelled: { bg: 'bg-[#B42318]/10', text: 'text-[#B42318]', dot: 'bg-[#B42318]' },
+    pending: { bg: 'bg-[#8A909C]/10', text: 'text-[#8A909C]', dot: 'bg-[#8A909C]' }
+  };
+  const statusColor = statusColors[trip.status] || statusColors.pending;
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-3xl mx-auto">
+    <div className="max-w-4xl text-[#14181F]">
+      {/* Back button */}
+      <button
+        onClick={() => navigate('/rides')}
+        className="group mb-4 inline-flex items-center gap-2 text-sm text-[#6B7280] transition hover:text-[#14181F]"
+      >
+        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+        Back to rides
+      </button>
+
+      {/* Main Card */}
+      <div className="rounded-2xl border border-[#E8E9ED] bg-white overflow-hidden">
         {/* Header */}
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Dashboard
-        </button>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h1 className="text-2xl font-bold text-gray-800 mb-6">Trip Details</h1>
-
-          {/* Status */}
-          <div className="flex items-center justify-between mb-6">
-            <div className={`px-4 py-2 rounded-full text-sm font-medium ${
-              trip.status === 'completed' ? 'bg-green-100 text-green-800' :
-              trip.status === 'started' ? 'bg-blue-100 text-blue-800' :
-              trip.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-              'bg-yellow-100 text-yellow-800'
-            }`}>
-              Status: {trip.status ? trip.status.toUpperCase() : 'UNKNOWN'}
+        <div className="p-6 sm:p-8 border-b border-[#F0F1F3]">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-[26px] font-semibold leading-none tracking-[-0.02em]">
+                  Trip #{reservationNumber}
+                </h1>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-[#6B7280]">
+                <span className="capitalize">{orderType}</span>
+                <span className="text-[#D6D9DF]">·</span>
+                <span>{pickupDateTime?.toLocaleDateString(undefined, { 
+                  month: 'short', 
+                  day: 'numeric', 
+                  year: 'numeric' 
+                })}</span>
+              </div>
             </div>
-            <div className="text-2xl font-bold text-gray-800">
-              ${typeof totalPrice === 'number' ? totalPrice.toFixed(2) : '0.00'}
+            <div className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium ${statusColor.bg} ${statusColor.text}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${statusColor.dot}`} />
+              {trip.status?.toUpperCase() || 'UNKNOWN'}
             </div>
           </div>
+        </div>
 
-          {/* Actions */}
-          {(canStart || canComplete) && (
-            <div className="flex gap-3 mb-6">
+        {/* Action Buttons */}
+        {(canStart || canComplete) && (
+          <div className="p-6 sm:p-8 border-b border-[#F0F1F3] bg-[#FAFAFA]">
+            <div className="flex flex-col sm:flex-row gap-3">
               {canStart && (
                 <button
                   onClick={handleStartTrip}
                   disabled={actionLoading}
-                  className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-[#14181F] px-6 py-3 
+                           text-sm font-medium text-white transition hover:bg-[#2A2F38] disabled:opacity-60 
+                           disabled:cursor-not-allowed"
                 >
-                  {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
-                  Start Trip
+                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                  Start trip
                 </button>
               )}
               {canComplete && (
                 <button
                   onClick={handleCompleteTrip}
                   disabled={actionLoading}
-                  className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-[#0B5C48] px-6 py-3 
+                           text-sm font-medium text-white transition hover:bg-[#0A4D3B] disabled:opacity-60 
+                           disabled:cursor-not-allowed"
                 >
-                  {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                  Complete Trip
+                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                  Complete trip
                 </button>
               )}
             </div>
-          )}
-
-          {/* Customer Info */}
-          <div className="border-t border-gray-100 pt-4 mb-4">
-            <h3 className="font-semibold text-gray-700 mb-3">Customer</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex items-center gap-2 text-gray-600">
-                <User className="w-4 h-4" />
-                {customerName}
-              </div>
-              <div className="flex items-center gap-2 text-gray-600">
-                <Phone className="w-4 h-4" />
-                {customerPhone}
-              </div>
-            </div>
           </div>
+        )}
 
-          {/* Trip Details */}
-          <div className="border-t border-gray-100 pt-4 mb-4">
-            <h3 className="font-semibold text-gray-700 mb-3">Trip Details</h3>
-            <div className="space-y-3">
-              <div className="flex items-start gap-2 text-gray-600">
-                <MapPin className="w-4 h-4 mt-1 flex-shrink-0" />
-                <div>
-                  <p className="font-medium text-gray-800">Pickup</p>
-                  <p>{pickupAddress}</p>
+        {/* Content */}
+        <div className="p-6 sm:p-8 space-y-8">
+          {/* Route */}
+          <section>
+            <h3 className="text-sm font-medium text-[#3A414D] mb-4">Route</h3>
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <div className="h-3 w-3 rounded-full border-2 border-[#14181F] bg-white" />
+                  <div className="w-px h-8 bg-[#D6D9DF]" />
+                  <div className="h-3 w-3 rounded-full bg-[#0B5C48]" />
+                </div>
+                <div className="flex-1 min-w-0 space-y-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.06em] text-[#9AA0AC]">Pickup</p>
+                    <p className="text-sm font-medium text-[#14181F]">{pickupAddress}</p>
+                    {pickupDateTime && (
+                      <p className="text-sm text-[#6B7280]">
+                        {pickupDateTime.toLocaleTimeString(undefined, { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })} · {pickupDateTime.toLocaleDateString(undefined, { 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.06em] text-[#9AA0AC]">Dropoff</p>
+                    <p className="text-sm font-medium text-[#14181F]">{dropoffAddress}</p>
+                    {dropoffDateTime && (
+                      <p className="text-sm text-[#6B7280]">
+                        {dropoffDateTime.toLocaleTimeString(undefined, { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })} · {dropoffDateTime.toLocaleDateString(undefined, { 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start gap-2 text-gray-600">
-                <MapPin className="w-4 h-4 mt-1 flex-shrink-0" />
-                <div>
-                  <p className="font-medium text-gray-800">Dropoff</p>
-                  <p>{dropoffAddress}</p>
+            </div>
+          </section>
+
+          {/* Customer & Vehicle */}
+          <section className="border-t border-[#F0F1F3] pt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="rounded-xl border border-[#F0F1F3] bg-[#FAFAFA] p-4">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-[#F5F5F3] p-2">
+                    <User className="h-4 w-4 text-[#6B7280]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-[#9AA0AC]">Customer</p>
+                    <p className="text-sm font-medium text-[#14181F] truncate">{customerName}</p>
+                  </div>
+                </div>
+                {customerPhone !== 'N/A' && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-[#6B7280] pl-2">
+                    <Phone className="h-3.5 w-3.5" />
+                    <span>{customerPhone}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-[#F0F1F3] bg-[#FAFAFA] p-4">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-[#F5F5F3] p-2">
+                    <Car className="h-4 w-4 text-[#6B7280]" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#9AA0AC]">Vehicle</p>
+                    <p className="text-sm font-medium text-[#14181F]">{vehicleDisplay}</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-gray-600">
-                <Clock className="w-4 h-4" />
-                {pickupDateTime}
-              </div>
-              {/* Vehicle display - fixed to handle both object and string */}
-              <div className="flex items-center gap-2 text-gray-600">
-                <Car className="w-4 h-4" />
-                {vehicleDisplay}
-              </div>
             </div>
-          </div>
+          </section>
+
+          {/* Additional Info */}
+          <section className="border-t border-[#F0F1F3] pt-6">
+            <h3 className="text-sm font-medium text-[#3A414D] mb-4">Details</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <InfoItem
+                icon={CreditCard}
+                label="Price"
+                value={`$${typeof totalPrice === 'number' ? totalPrice.toFixed(2) : '0.00'}`}
+              />
+              <InfoItem
+                icon={DollarSign}
+                label="Payment status"
+                value={
+                  <span className={`font-medium ${
+                    trip.paymentStatus === 'paid' ? 'text-[#0B5C48]' :
+                    trip.paymentStatus === 'unpaid' ? 'text-[#B8860B]' :
+                    'text-[#6B7280]'
+                  }`}>
+                    {trip.paymentStatus?.charAt(0).toUpperCase() + trip.paymentStatus?.slice(1) || 'N/A'}
+                  </span>
+                }
+              />
+              {trip.passengerCount && (
+                <InfoItem
+                  icon={Package}
+                  label="Passengers"
+                  value={trip.passengerCount}
+                />
+              )}
+              {trip.distance && (
+                <InfoItem
+                  icon={Navigation}
+                  label="Distance"
+                  value={`${trip.distance} mi`}
+                />
+              )}
+            </div>
+          </section>
 
           {/* Notes */}
-          {trip.notes && (
-            <div className="border-t border-gray-100 pt-4">
-              <h3 className="font-semibold text-gray-700 mb-2">Notes</h3>
-              <p className="text-gray-600 text-sm">{trip.notes}</p>
-            </div>
+          {(trip.tripNotes || trip.driverNote) && (
+            <section className="border-t border-[#F0F1F3] pt-6">
+              <h3 className="text-sm font-medium text-[#3A414D] mb-2">Notes</h3>
+              <p className="text-sm text-[#6B7280] leading-relaxed">
+                {trip.tripNotes || trip.driverNote}
+              </p>
+            </section>
+          )}
+
+          {/* Additional Stops */}
+          {trip.stops && trip.stops.length > 2 && (
+            <section className="border-t border-[#F0F1F3] pt-6">
+              <h3 className="text-sm font-medium text-[#3A414D] mb-3">Waypoints</h3>
+              <div className="space-y-2">
+                {trip.stops.map((stop, index) => {
+                  const isPickup = stop.type === 'pickup';
+                  const isDropoff = stop.type === 'dropoff';
+                  const label = isPickup ? 'Pickup' : isDropoff ? 'Dropoff' : `Stop ${index + 1}`;
+                  const address = stop.locationType === 'airport'
+                    ? [stop.airport?.code, stop.airport?.name].filter(Boolean).join(' · ') || 'Airport'
+                    : [stop.address?.street || stop.address?.address, stop.address?.city, stop.address?.state]
+                        .filter(Boolean).join(', ') || '—';
+                  
+                  return (
+                    <div key={stop._id || index} className="flex items-center gap-3 rounded-xl border border-[#F0F1F3] bg-[#FAFAFA] px-4 py-2.5">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        isPickup ? 'bg-[#0B5C48]/10 text-[#0B5C48]' :
+                        isDropoff ? 'bg-[#B42318]/10 text-[#B42318]' :
+                        'bg-[#E8E9ED] text-[#6B7280]'
+                      }`}>
+                        {label}
+                      </span>
+                      <span className="text-sm text-[#14181F] truncate">{address}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
           )}
         </div>
+      </div>
+    </div>
+  );
+};
+
+// Info Item Component
+const InfoItem = ({ icon: Icon, label, value }) => {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-[#F0F1F3] bg-[#FAFAFA] px-4 py-3">
+      {Icon && <Icon className="h-4 w-4 text-[#8A909C] shrink-0" />}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-[#9AA0AC]">{label}</p>
+        <p className="text-sm font-medium text-[#14181F] truncate">{value || '—'}</p>
       </div>
     </div>
   );

@@ -2,9 +2,12 @@
 const Driver = require('../../../models/settings/Driver');
 const Reservation = require('../../../models/Reservation');
 const Vehicle = require('../../../models/Vehicle');
-
-
 const User = require('../../../models/User');   // add near the other requires
+
+const {
+  sendTripStatusNotification,
+  sendAvailabilityNotification
+} = require('./notificationController')
 
 // ============ CHANGE PASSWORD ============
 const MIN_PASSWORD_LENGTH = 8;   // keep in sync with the modal
@@ -38,6 +41,7 @@ const getDriverProfile = async (req, res) => {
 };
 
 // ============ TRIPS ============
+// Add to getDriverTrips function
 const getDriverTrips = async (req, res) => {
   try {
     const driver = await getDriverDoc(req.user._id);
@@ -45,16 +49,20 @@ const getDriverTrips = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Driver profile not found' });
     }
 
-    const { status, date } = req.query;
+    const { status, date, page = 1, limit = 50 } = req.query;
     const query = {
-      driver: driver._id,          // Driver doc id, not the User id
+      driver: driver._id,
       isDeleted: false
     };
 
-    // Accept a single status ("started") or a comma list ("confirmed,dispatched,started")
+    // Accept a single status or comma list
     if (status) {
       const statuses = status.split(',').map((s) => s.trim()).filter(Boolean);
-      query.status = statuses.length > 1 ? { $in: statuses } : statuses[0];
+      if (statuses.length === 1) {
+        query.status = statuses[0];
+      } else if (statuses.length > 1) {
+        query.status = { $in: statuses };
+      }
     }
 
     if (date) {
@@ -65,18 +73,33 @@ const getDriverTrips = async (req, res) => {
       query.pickupDateTime = { $gte: start, $lte: end };
     }
 
-    const trips = await Reservation.find(query)
-      .populate('bookingContact', 'firstName lastName phone')
-      .populate('vehicle', 'name type images')
-      .sort({ pickupDateTime: 1 })
-      .lean();
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const [trips, total] = await Promise.all([
+      Reservation.find(query)
+        .populate('bookingContact', 'firstName lastName phone email')
+        .populate('vehicle', 'name type images')
+        .sort({ pickupDateTime: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Reservation.countDocuments(query)
+    ]);
 
-    return res.status(200).json({ success: true, data: trips });
+    return res.status(200).json({ 
+      success: true, 
+      data: trips,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-
 const getDriverTripById = async (req, res) => {
   try {
     const driver = await getDriverDoc(req.user._id);
@@ -103,6 +126,7 @@ const getDriverTripById = async (req, res) => {
   }
 };
 
+// ============ START TRIP ============
 const startTrip = async (req, res) => {
   try {
     const driver = await getDriverDoc(req.user._id);
@@ -131,6 +155,10 @@ const startTrip = async (req, res) => {
     trip.startedAt = new Date();
     await trip.save();
 
+    // ============ SEND NOTIFICATION ============
+    const io = req.app.get('io');
+    await sendTripStatusNotification(driver._id, trip._id, 'started', io);
+
     return res.status(200).json({
       success: true,
       message: 'Trip started successfully',
@@ -141,6 +169,7 @@ const startTrip = async (req, res) => {
   }
 };
 
+// ============ COMPLETE TRIP ============
 const completeTrip = async (req, res) => {
   try {
     const driver = await getDriverDoc(req.user._id);
@@ -169,6 +198,10 @@ const completeTrip = async (req, res) => {
     trip.completedAt = new Date();
     await trip.save();
 
+    // ============ SEND NOTIFICATION ============
+    const io = req.app.get('io');
+    await sendTripStatusNotification(driver._id, trip._id, 'completed', io);
+
     return res.status(200).json({
       success: true,
       message: 'Trip completed successfully',
@@ -179,13 +212,13 @@ const completeTrip = async (req, res) => {
   }
 };
 
-// ============ AVAILABILITY ============
+// ============ UPDATE AVAILABILITY ============
 const updateAvailability = async (req, res) => {
   try {
     const { isAvailable } = req.body;
 
     const driver = await Driver.findOneAndUpdate(
-      { userId: req.user._id },   // key by the link field, not _id
+      { userId: req.user._id },
       { isAvailable },
       { new: true }
     );
@@ -193,6 +226,10 @@ const updateAvailability = async (req, res) => {
     if (!driver) {
       return res.status(404).json({ success: false, message: 'Driver profile not found' });
     }
+
+    // ============ SEND NOTIFICATION ============
+    const io = req.app.get('io');
+    await sendAvailabilityNotification(driver._id, isAvailable, io);
 
     return res.status(200).json({
       success: true,
@@ -204,7 +241,7 @@ const updateAvailability = async (req, res) => {
   }
 };
 
-// ============ LOCATION TRACKING ============
+// ============ LOCATION TRACKING (not completed yet)============
 const updateLocation = async (req, res) => {
   try {
     const { lat, lng, speed, heading } = req.body;
@@ -223,6 +260,9 @@ const updateLocation = async (req, res) => {
 };
 
 // ============ EARNINGS ============
+// modules/driver/controllers/driverController.js
+
+// ============ EARNINGS ============
 const getEarnings = async (req, res) => {
   try {
     const driver = await getDriverDoc(req.user._id);
@@ -230,27 +270,43 @@ const getEarnings = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Driver profile not found' });
     }
 
-    const { period = 'today' } = req.query;
+    const { period = 'month' } = req.query;
 
     let startDate = new Date();
-    if (period === 'today') startDate.setHours(0, 0, 0, 0);
-    if (period === 'week') startDate.setDate(startDate.getDate() - 7);
-    if (period === 'month') startDate.setDate(startDate.getDate() - 30);
+    if (period === 'today') {
+      startDate.setHours(0, 0, 0, 0);
+    } else if (period === 'week') {
+      startDate.setDate(startDate.getDate() - 7);
+    } else if (period === 'month') {
+      startDate.setDate(startDate.getDate() - 30);
+    } else if (period === 'all') {
+      startDate = new Date(0); // Beginning of time
+    }
 
     const trips = await Reservation.find({
-      driver: driver._id,          // Driver doc id
+      driver: driver._id,
       status: 'completed',
       completedAt: { $gte: startDate }
-    });
+    })
+    .populate('bookingContact', 'firstName lastName phone')
+    .sort({ completedAt: -1 });
 
     const totalEarnings = trips.reduce((sum, t) => sum + (t.pricing?.total || 0), 0);
-    const count = trips.length;
+    
+    // Calculate paid vs unpaid (paymentStatus field)
+    const paidTrips = trips.filter(t => t.paymentStatus === 'paid');
+    const unpaidTrips = trips.filter(t => t.paymentStatus === 'unpaid' || !t.paymentStatus);
+    
+    const paidBalance = paidTrips.reduce((sum, t) => sum + (t.pricing?.total || 0), 0);
+    const unpaidBalance = unpaidTrips.reduce((sum, t) => sum + (t.pricing?.total || 0), 0);
 
     return res.status(200).json({
       success: true,
       data: {
         totalEarnings,
-        tripCount: count,
+        tripCount: trips.length,
+        paidBalance,
+        unpaidBalance,
         period,
         trips
       }

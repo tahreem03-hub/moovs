@@ -8,6 +8,7 @@ const api = axios.create({
   withCredentials: true,
 });
 
+
 // Response interceptor
 api.interceptors.response.use(
   (response) => response,
@@ -23,6 +24,9 @@ api.interceptors.response.use(
 );
 
 export const driverApi = {
+
+
+
   // Profile - to check if user is driver
   getProfile: () => api.get('/user/me'), // Uses common /user/me endpoint
 
@@ -37,6 +41,32 @@ export const driverApi = {
   getStats: () => api.get('/driver/stats'),
   logout: () => api.get('/user/logout'),
   changePassword: (currentPassword, newPassword) => api.put('/driver/change-password', { currentPassword, newPassword }),
+
+  
+  uploadDocument: (file, type, expiryDate, displayName) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+    if (expiryDate) formData.append('expiryDate', expiryDate);
+    if (displayName) formData.append('displayName', displayName);
+
+    return api.post('/driver/documents', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
+  getDocuments: () => api.get('/driver/documents'),
+  getDocumentById: (id) => api.get(`/driver/documents/${id}`),
+  deleteDocument: (id) => api.delete(`/driver/documents/${id}`),
+  getExpiringDocuments: (days) => api.get(`/driver/documents/expiring?days=${days || 30}`),
+
+
+
+  getNotifications: (params) => api.get('/driver/notifications', { params }),
+  getUnreadCount: () => api.get('/driver/notifications/unread-count'),
+  markAsRead: (id) => api.put(`/driver/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/driver/notifications/read-all'),
+  deleteNotification: (id) => api.delete(`/driver/notifications/${id}`),
 };
 
 export default api;

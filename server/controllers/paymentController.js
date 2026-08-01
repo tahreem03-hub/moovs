@@ -1,6 +1,8 @@
 // controllers/paymentController.js
 const Reservation = require('../models/Reservation');
 const crypto = require('crypto');
+const Driver = require('../models/settings/Driver');
+const { sendPaymentNotification } = require('../modules/driver/controllers/notificationController');
 
 // ============ COLLECT PAYMENT ============
 const collectPayment = async (req, res) => {
@@ -56,6 +58,27 @@ const collectPayment = async (req, res) => {
 
     await reservation.save();
 
+    // ============ SEND NOTIFICATIONS ============
+    try {
+      const io = req.app.get('io');
+      
+      // Notify driver if payment is for their trip
+      if (reservation.driver) {
+        const driver = await Driver.findById(reservation.driver);
+        if (driver) {
+          await sendPaymentNotification(
+            driver._id,
+            reservation._id,
+            amount,
+            io
+          );
+        }
+      }
+    } catch (notifError) {
+      console.error('Payment notification error:', notifError);
+      // Don't fail the request if notification fails
+    }
+
     return res.status(200).json({
       success: true,
       message: `Payment of $${amount} collected via ${method}`,
@@ -69,6 +92,178 @@ const collectPayment = async (req, res) => {
   } catch (error) {
     console.error('Collect payment error:', error);
     return res.status(500).json({ success: false, message: 'Failed to collect payment' });
+  }
+};
+
+// ============ PROCESS PAYMENT LINK (Public) ============
+const processPaymentLink = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { paymentMethod } = req.body;
+
+    const reservation = await Reservation.findOne({
+      'paymentLink.token': token,
+      'paymentLink.status': 'active',
+      'paymentLink.expiresAt': { $gt: new Date() }
+    });
+
+    if (!reservation) {
+      return res.status(404).json({ success: false, message: 'Invalid or expired payment link' });
+    }
+
+    // Calculate remaining balance
+    const totalPaid = reservation.payments.reduce((sum, p) => sum + p.amount, 0);
+    const remaining = reservation.pricing.total - totalPaid;
+
+    // Process payment (simplified - in production, integrate with Stripe/PayPal)
+    reservation.payments.push({
+      amount: remaining,
+      method: 'online',
+      reference: `PAY-${token.slice(0, 8)}`,
+      notes: 'Paid via payment link',
+      collectedBy: null,
+      collectedAt: new Date(),
+      status: 'completed'
+    });
+
+    reservation.paymentStatus = 'paid';
+    reservation.isClosed = true;
+    reservation.closedAt = new Date();
+    reservation.paymentLink.status = 'used';
+
+    await reservation.save();
+
+    // ============ SEND NOTIFICATIONS ============
+    try {
+      const io = req.app.get('io');
+      
+      // Notify driver about payment
+      if (reservation.driver) {
+        const driver = await Driver.findById(reservation.driver);
+        if (driver) {
+          await sendPaymentNotification(
+            driver._id,
+            reservation._id,
+            remaining,
+            io
+          );
+        }
+      }
+    } catch (notifError) {
+      console.error('Payment notification error:', notifError);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Payment successful!',
+      data: { reservationNumber: reservation.reservationNumber }
+    });
+  } catch (error) {
+    console.error('Process payment link error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to process payment' });
+  }
+};
+
+// ============ CLOSE RESERVATION (Manual) ============
+const closeReservation = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const reservation = await Reservation.findOne({
+      _id: id,
+      operatorId: req.user._id,
+      isDeleted: false
+    });
+
+    if (!reservation) {
+      return res.status(404).json({ success: false, message: 'Reservation not found' });
+    }
+
+    // Check if fully paid
+    const totalPaid = reservation.payments.reduce((sum, p) => sum + p.amount, 0);
+    if (totalPaid < reservation.pricing.total) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot close. Remaining balance: $${(reservation.pricing.total - totalPaid).toFixed(2)}`
+      });
+    }
+
+    reservation.isClosed = true;
+    reservation.closedAt = new Date();
+    await reservation.save();
+
+    // ============ SEND NOTIFICATION ============
+    try {
+      const io = req.app.get('io');
+      const NotificationService = require('../services/notificationService');
+      const notificationService = new NotificationService(io);
+      
+      // Notify driver that reservation is closed
+      if (reservation.driver) {
+        const driver = await Driver.findById(reservation.driver);
+        if (driver) {
+          await notificationService.createNotification({
+            recipient: driver.userId,
+            recipientType: 'User',
+            recipientRole: 'driver',
+            type: 'system_alert',
+            title: 'Trip Closed 📋',
+            message: `Trip #${reservation.reservationNumber} has been closed and fully paid`,
+            data: {
+              tripId: reservation._id,
+              reservationNumber: reservation.reservationNumber,
+              totalAmount: reservation.pricing.total
+            },
+            priority: 'medium',
+            actionUrl: `/driver/trips/${reservation._id}`
+          });
+        }
+      }
+    } catch (notifError) {
+      console.error('Close reservation notification error:', notifError);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Reservation closed successfully',
+      data: reservation
+    });
+  } catch (error) {
+    console.error('Close reservation error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to close reservation' });
+  }
+};
+
+// ============ GET PAYMENT HISTORY ============
+const getPaymentHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const reservation = await Reservation.findOne({
+      _id: id,
+      operatorId: req.user._id,
+      isDeleted: false
+    }).select('payments paymentStatus pricing.total');
+
+    if (!reservation) {
+      return res.status(404).json({ success: false, message: 'Reservation not found' });
+    }
+
+    const totalPaid = reservation.payments.reduce((sum, p) => sum + p.amount, 0);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        payments: reservation.payments,
+        totalAmount: reservation.pricing.total,
+        totalPaid,
+        remainingBalance: reservation.pricing.total - totalPaid,
+        paymentStatus: reservation.paymentStatus
+      }
+    });
+  } catch (error) {
+    console.error('Get payment history error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch payment history' });
   }
 };
 
@@ -112,6 +307,37 @@ const generatePaymentLink = async (req, res) => {
 
     const paymentLink = `${process.env.FRONTEND_URL}/pay/${token}`;
 
+    // ============ SEND NOTIFICATION TO DRIVER ============
+    try {
+      const io = req.app.get('io');
+      const NotificationService = require('../services/notificationService');
+      const notificationService = new NotificationService(io);
+      
+      if (reservation.driver) {
+        const driver = await Driver.findById(reservation.driver);
+        if (driver) {
+          await notificationService.createNotification({
+            recipient: driver.userId,
+            recipientType: 'User',
+            recipientRole: 'driver',
+            type: 'payment_received',
+            title: 'Payment Link Generated 💳',
+            message: `A payment link has been generated for trip #${reservation.reservationNumber}`,
+            data: {
+              tripId: reservation._id,
+              reservationNumber: reservation.reservationNumber,
+              amount: remaining,
+              paymentLink: paymentLink
+            },
+            priority: 'medium',
+            actionUrl: `/driver/trips/${reservation._id}`
+          });
+        }
+      }
+    } catch (notifError) {
+      console.error('Payment link notification error:', notifError);
+    }
+
     return res.status(200).json({
       success: true,
       data: {
@@ -125,127 +351,6 @@ const generatePaymentLink = async (req, res) => {
   } catch (error) {
     console.error('Generate payment link error:', error);
     return res.status(500).json({ success: false, message: 'Failed to generate payment link' });
-  }
-};
-
-// ============ PROCESS PAYMENT LINK (Public) ============
-const processPaymentLink = async (req, res) => {
-  try {
-    const { token } = req.params;
-    const { paymentMethod } = req.body;
-
-    const reservation = await Reservation.findOne({
-      'paymentLink.token': token,
-      'paymentLink.status': 'active',
-      'paymentLink.expiresAt': { $gt: new Date() }
-    });
-
-    if (!reservation) {
-      return res.status(404).json({ success: false, message: 'Invalid or expired payment link' });
-    }
-
-    // Calculate remaining balance
-    const totalPaid = reservation.payments.reduce((sum, p) => sum + p.amount, 0);
-    const remaining = reservation.pricing.total - totalPaid;
-
-    // Process payment (simplified - in production, integrate with Stripe/PayPal)
-    reservation.payments.push({
-      amount: remaining,
-      method: 'online',
-      reference: `PAY-${token.slice(0, 8)}`,
-      notes: 'Paid via payment link',
-      collectedBy: null,
-      collectedAt: new Date(),
-      status: 'completed'
-    });
-
-    reservation.paymentStatus = 'paid';
-    reservation.isClosed = true;
-    reservation.closedAt = new Date();
-    reservation.paymentLink.status = 'used';
-
-    await reservation.save();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Payment successful!',
-      data: { reservationNumber: reservation.reservationNumber }
-    });
-  } catch (error) {
-    console.error('Process payment link error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to process payment' });
-  }
-};
-
-// ============ GET PAYMENT HISTORY ============
-const getPaymentHistory = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const reservation = await Reservation.findOne({
-      _id: id,
-      operatorId: req.user._id,
-      isDeleted: false
-    }).select('payments paymentStatus pricing.total');
-
-    if (!reservation) {
-      return res.status(404).json({ success: false, message: 'Reservation not found' });
-    }
-
-    const totalPaid = reservation.payments.reduce((sum, p) => sum + p.amount, 0);
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        payments: reservation.payments,
-        totalAmount: reservation.pricing.total,
-        totalPaid,
-        remainingBalance: reservation.pricing.total - totalPaid,
-        paymentStatus: reservation.paymentStatus
-      }
-    });
-  } catch (error) {
-    console.error('Get payment history error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to fetch payment history' });
-  }
-};
-
-// ============ CLOSE RESERVATION (Manual) ============
-const closeReservation = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const reservation = await Reservation.findOne({
-      _id: id,
-      operatorId: req.user._id,
-      isDeleted: false
-    });
-
-    if (!reservation) {
-      return res.status(404).json({ success: false, message: 'Reservation not found' });
-    }
-
-    // Check if fully paid
-    const totalPaid = reservation.payments.reduce((sum, p) => sum + p.amount, 0);
-    if (totalPaid < reservation.pricing.total) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot close. Remaining balance: $${(reservation.pricing.total - totalPaid).toFixed(2)}`
-      });
-    }
-
-    reservation.isClosed = true;
-    reservation.closedAt = new Date();
-    await reservation.save();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Reservation closed successfully',
-      data: reservation
-    });
-  } catch (error) {
-    console.error('Close reservation error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to close reservation' });
   }
 };
 
@@ -287,7 +392,6 @@ const validatePaymentLink = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   collectPayment,

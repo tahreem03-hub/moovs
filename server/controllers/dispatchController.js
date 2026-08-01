@@ -2,6 +2,7 @@
 const Reservation = require('../models/Reservation');
 const Vehicle = require('../models/Vehicle');
 const Driver = require('../models/settings/Driver');
+const { sendTripAssignedNotification } = require('../modules/driver/controllers/notificationController');
 
 // Get dispatch board data
 const getDispatchBoard = async (req, res) => {
@@ -88,6 +89,11 @@ const assignDriver = async (req, res) => {
     reservation.status = 'dispatched';
     reservation.dispatchedAt = new Date();
     await reservation.save();
+
+    // Send notification to driver
+    const io = req.app.get('io');
+    await sendTripAssignedNotification(driverId, tripId, io);
+
 
     return res.status(200).json({
       success: true,
