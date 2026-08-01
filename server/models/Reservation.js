@@ -253,7 +253,10 @@ const reservationSchema = new Schema(
             }
         }],
         paymentLink: {
-            token: { type: String, unique: true },
+            
+            token: { type: String, //unique: true,
+                sparse: true, // ✅ This allows multiple null values
+             },
             expiresAt: { type: Date },
             status: { type: String, enum: ['active', 'used', 'expired'], default: 'active' }
         },

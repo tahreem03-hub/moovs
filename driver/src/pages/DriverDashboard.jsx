@@ -1,11 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Car, CheckCircle, Clock, XCircle, Calendar, 
-  DollarSign, Loader2, LogOut 
+import {
+  Car, CheckCircle, Clock, XCircle, Calendar,
+  DollarSign, Loader2, LogOut, Navigation, Play, KeyRound
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import {driverApi}  from '../services/api';
+import { driverApi } from '../services/api';
+import ChangePasswordModal from '../components/ChangePasswordModal';
+
+// Status → icon / color maps for the trip pills.
+// Keys match the Reservation status enum:
+// pending | confirmed | dispatched | started | completed | cancelled | billed
+const statusIcons = {
+  pending: Clock,
+  confirmed: CheckCircle,
+  dispatched: Navigation,
+  started: Play,
+  completed: CheckCircle,
+  cancelled: XCircle,
+  billed: DollarSign,
+};
+
+const statusColors = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  confirmed: 'bg-blue-100 text-blue-800',
+  dispatched: 'bg-indigo-100 text-indigo-800',
+  started: 'bg-purple-100 text-purple-800',
+  completed: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800',
+  billed: 'bg-gray-100 text-gray-800',
+};
 
 const DriverDashboard = () => {
   const [driver, setDriver] = useState(null);
@@ -18,6 +42,7 @@ const DriverDashboard = () => {
   const [recentTrips, setRecentTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingAvailability, setUpdatingAvailability] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -61,13 +86,22 @@ const DriverDashboard = () => {
     try {
       await driverApi.logout();
       toast.success('Logged out successfully');
-      navigate('/driver/login');
     } catch (error) {
       toast.error('Logout failed');
+    } finally {
+      // Leave the driver app entirely and return to the main app's login.
+      const mainAppUrl = import.meta.env.VITE_MAIN_APP_URL || 'http://localhost:5173';
+      window.location.href = `${mainAppUrl}/login`;
     }
   };
 
-  // ... rest of dashboard code (same as before)
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -102,7 +136,15 @@ const DriverDashboard = () => {
                 )}
               </button>
               <button
+                onClick={() => setShowPasswordModal(true)}
+                title="Change password"
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              >
+                <KeyRound className="w-5 h-5" />
+              </button>
+              <button
                 onClick={handleLogout}
+                title="Log out"
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
               >
                 <LogOut className="w-5 h-5" />
@@ -141,7 +183,7 @@ const DriverDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Total Earnings</p>
-                <p className="text-2xl font-bold text-green-600">${stats.totalEarnings.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-green-600">${(stats.totalEarnings || 0).toFixed(2)}</p>
               </div>
               <div className="bg-green-100 rounded-lg p-3">
                 <DollarSign className="w-6 h-6 text-green-600" />
@@ -166,7 +208,7 @@ const DriverDashboard = () => {
         {/* Recent Trips */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Your Trips</h2>
-          
+
           {recentTrips.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Car className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -180,7 +222,7 @@ const DriverDashboard = () => {
                   <div
                     key={trip._id}
                     className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition cursor-pointer"
-                    onClick={() => navigate(`/driver/trips/${trip._id}`)}
+                    onClick={() => navigate(`/trips/${trip._id}`)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -215,6 +257,12 @@ const DriverDashboard = () => {
           )}
         </div>
       </main>
+
+      {/* Change-password modal */}
+      <ChangePasswordModal
+        open={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+      />
     </div>
   );
 };

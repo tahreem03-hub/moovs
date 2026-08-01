@@ -10,7 +10,8 @@ const {
   updateAvailability,
   updateLocation,
   getEarnings,
-  getDriverStats
+  getDriverStats,
+  changePassword
 } = require('../controllers/driverController');
 const { isAuthenticated, authorizeDriver } = require('../../../middleware/auth');
 
@@ -21,6 +22,9 @@ router.use(authorizeDriver);
 
 // Profile
 router.get('/profile', getDriverProfile);
+
+// Account
+router.put('/change-password', changePassword);
 
 // Trips
 router.get('/trips', getDriverTrips);

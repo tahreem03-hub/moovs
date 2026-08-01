@@ -100,7 +100,7 @@ const ReservationForm = ({ isFormOpen, isEdit = false, quoteId = null }) => {
         axios.get(`${VITE_URL}/contact/list`, { withCredentials: true }),
         axios.get(`${VITE_URL}/vehicle/my-vehicles`, { withCredentials: true }),
         axios.get(`${VITE_URL}/member/list`, { withCredentials: true }),
-        axios.get(`${VITE_URL}/driver/list`, { withCredentials: true }),
+        axios.get(`${VITE_URL}/settings/driver/list`, { withCredentials: true }),
         axios.get(`${VITE_URL}/company-profile/preferences`, { withCredentials: true }),
         axios.get(`${VITE_URL}/company-profile/customer-portal/settings`, { withCredentials: true })
       ]);

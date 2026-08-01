@@ -20,9 +20,9 @@ router.use(authorizeOperator);
 
 router.post('/create', upload.single('profilePicture'), createDriver);
 router.get('/list', getDrivers);
-router.get('/dropdown', getDriverDropdown);
-router.get('/:id', getDriverById);
+router.get('/dropdown', getDriverDropdown);   // not used
+router.get('/:id', getDriverById);            // not used
 router.put('/update/:id', upload.single('profilePicture'), updateDriver);
-router.delete('/delete/:id', deleteDriver);
+router.delete('/delete/:id', deleteDriver);    //not used
 
 module.exports = router;

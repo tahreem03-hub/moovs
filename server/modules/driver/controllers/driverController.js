@@ -4,14 +4,34 @@ const Reservation = require('../../../models/Reservation');
 const Vehicle = require('../../../models/Vehicle');
 
 
+const User = require('../../../models/User');   // add near the other requires
+
+// ============ CHANGE PASSWORD ============
+const MIN_PASSWORD_LENGTH = 8;   // keep in sync with the modal
+
+/**
+ * req.user is the authenticated User doc (role: 'driver').
+ * reservation.driver references the Driver collection (ref: 'Driver'),
+ * and Driver links back to User via Driver.userId.
+ * So every driver-scoped query must resolve the Driver doc first,
+ * then filter reservations by driver._id — NOT req.user._id.
+ */
+const getDriverDoc = async (userId) => Driver.findOne({ userId });
+
 // ============ PROFILE ============
 const getDriverProfile = async (req, res) => {
   try {
-    const driver = await Driver.findOne({ 
-      operatorId: req.user._id 
-    }).select('firstName lastName phone profilePicture isAvailable');
-    
-    return res.status(200).json({ success: true, data: driver });
+    const driver = await getDriverDoc(req.user._id);
+    if (!driver) {
+      return res.status(404).json({ success: false, message: 'Driver profile not found' });
+    }
+
+    // Return only the display fields the panel needs
+    const { firstName, lastName, phone, profilePicture, isAvailable } = driver;
+    return res.status(200).json({
+      success: true,
+      data: { firstName, lastName, phone, profilePicture, isAvailable }
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -20,13 +40,23 @@ const getDriverProfile = async (req, res) => {
 // ============ TRIPS ============
 const getDriverTrips = async (req, res) => {
   try {
+    const driver = await getDriverDoc(req.user._id);
+    if (!driver) {
+      return res.status(404).json({ success: false, message: 'Driver profile not found' });
+    }
+
     const { status, date } = req.query;
     const query = {
-      driver: req.user._id,
+      driver: driver._id,          // Driver doc id, not the User id
       isDeleted: false
     };
-    
-    if (status) query.status = status;
+
+    // Accept a single status ("started") or a comma list ("confirmed,dispatched,started")
+    if (status) {
+      const statuses = status.split(',').map((s) => s.trim()).filter(Boolean);
+      query.status = statuses.length > 1 ? { $in: statuses } : statuses[0];
+    }
+
     if (date) {
       const start = new Date(date);
       start.setHours(0, 0, 0, 0);
@@ -34,13 +64,13 @@ const getDriverTrips = async (req, res) => {
       end.setHours(23, 59, 59, 999);
       query.pickupDateTime = { $gte: start, $lte: end };
     }
-    
+
     const trips = await Reservation.find(query)
       .populate('bookingContact', 'firstName lastName phone')
       .populate('vehicle', 'name type images')
       .sort({ pickupDateTime: 1 })
       .lean();
-    
+
     return res.status(200).json({ success: true, data: trips });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -49,19 +79,24 @@ const getDriverTrips = async (req, res) => {
 
 const getDriverTripById = async (req, res) => {
   try {
+    const driver = await getDriverDoc(req.user._id);
+    if (!driver) {
+      return res.status(404).json({ success: false, message: 'Driver profile not found' });
+    }
+
     const trip = await Reservation.findOne({
       _id: req.params.id,
-      driver: req.user._id,
+      driver: driver._id,
       isDeleted: false
     })
       .populate('bookingContact', 'firstName lastName phone email')
       .populate('vehicle', 'name type images')
       .lean();
-    
+
     if (!trip) {
       return res.status(404).json({ success: false, message: 'Trip not found' });
     }
-    
+
     return res.status(200).json({ success: true, data: trip });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -70,27 +105,32 @@ const getDriverTripById = async (req, res) => {
 
 const startTrip = async (req, res) => {
   try {
+    const driver = await getDriverDoc(req.user._id);
+    if (!driver) {
+      return res.status(404).json({ success: false, message: 'Driver profile not found' });
+    }
+
     const trip = await Reservation.findOne({
       _id: req.params.id,
-      driver: req.user._id,
+      driver: driver._id,
       isDeleted: false
     });
-    
+
     if (!trip) {
       return res.status(404).json({ success: false, message: 'Trip not found' });
     }
-    
+
     if (trip.status !== 'dispatched' && trip.status !== 'confirmed') {
       return res.status(400).json({
         success: false,
         message: `Cannot start trip with status: ${trip.status}`
       });
     }
-    
+
     trip.status = 'started';
     trip.startedAt = new Date();
     await trip.save();
-    
+
     return res.status(200).json({
       success: true,
       message: 'Trip started successfully',
@@ -103,27 +143,32 @@ const startTrip = async (req, res) => {
 
 const completeTrip = async (req, res) => {
   try {
+    const driver = await getDriverDoc(req.user._id);
+    if (!driver) {
+      return res.status(404).json({ success: false, message: 'Driver profile not found' });
+    }
+
     const trip = await Reservation.findOne({
       _id: req.params.id,
-      driver: req.user._id,
+      driver: driver._id,
       isDeleted: false
     });
-    
+
     if (!trip) {
       return res.status(404).json({ success: false, message: 'Trip not found' });
     }
-    
+
     if (trip.status !== 'started') {
       return res.status(400).json({
         success: false,
         message: `Cannot complete trip with status: ${trip.status}`
       });
     }
-    
+
     trip.status = 'completed';
     trip.completedAt = new Date();
     await trip.save();
-    
+
     return res.status(200).json({
       success: true,
       message: 'Trip completed successfully',
@@ -138,13 +183,17 @@ const completeTrip = async (req, res) => {
 const updateAvailability = async (req, res) => {
   try {
     const { isAvailable } = req.body;
-    
-    const driver = await Driver.findByIdAndUpdate(
-      req.user._id,
+
+    const driver = await Driver.findOneAndUpdate(
+      { userId: req.user._id },   // key by the link field, not _id
       { isAvailable },
       { new: true }
     );
-    
+
+    if (!driver) {
+      return res.status(404).json({ success: false, message: 'Driver profile not found' });
+    }
+
     return res.status(200).json({
       success: true,
       message: `Driver ${isAvailable ? 'available' : 'unavailable'}`,
@@ -159,10 +208,10 @@ const updateAvailability = async (req, res) => {
 const updateLocation = async (req, res) => {
   try {
     const { lat, lng, speed, heading } = req.body;
-    
+
     // Store in Redis or a location collection
     // Broadcast to dispatch via WebSocket
-    
+
     return res.status(200).json({
       success: true,
       message: 'Location updated',
@@ -176,22 +225,27 @@ const updateLocation = async (req, res) => {
 // ============ EARNINGS ============
 const getEarnings = async (req, res) => {
   try {
+    const driver = await getDriverDoc(req.user._id);
+    if (!driver) {
+      return res.status(404).json({ success: false, message: 'Driver profile not found' });
+    }
+
     const { period = 'today' } = req.query;
-    
+
     let startDate = new Date();
     if (period === 'today') startDate.setHours(0, 0, 0, 0);
     if (period === 'week') startDate.setDate(startDate.getDate() - 7);
     if (period === 'month') startDate.setDate(startDate.getDate() - 30);
-    
+
     const trips = await Reservation.find({
-      driver: req.user._id,
+      driver: driver._id,          // Driver doc id
       status: 'completed',
       completedAt: { $gte: startDate }
     });
-    
+
     const totalEarnings = trips.reduce((sum, t) => sum + (t.pricing?.total || 0), 0);
     const count = trips.length;
-    
+
     return res.status(200).json({
       success: true,
       data: {
@@ -209,33 +263,77 @@ const getEarnings = async (req, res) => {
 // ============ STATS ============
 const getDriverStats = async (req, res) => {
   try {
+    const driver = await getDriverDoc(req.user._id);
+    if (!driver) {
+      return res.status(404).json({ success: false, message: 'Driver profile not found' });
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const [todayTrips, pendingTrips, totalEarnings] = await Promise.all([
       Reservation.countDocuments({
-        driver: req.user._id,
+        driver: driver._id,
         pickupDateTime: { $gte: today }
       }),
       Reservation.countDocuments({
-        driver: req.user._id,
+        driver: driver._id,
         status: { $in: ['confirmed', 'dispatched'] }
       }),
       Reservation.aggregate([
-        { $match: { driver: req.user._id, status: 'completed' } },
+        { $match: { driver: driver._id, status: 'completed' } },
         { $group: { _id: null, total: { $sum: '$pricing.total' } } }
       ])
     ]);
-    
+
     return res.status(200).json({
       success: true,
       data: {
         todayTrips,
         pendingTrips,
         totalEarnings: totalEarnings[0]?.total || 0,
-        isAvailable: req.user.isAvailable
+        isAvailable: driver.isAvailable   // read from Driver doc, not req.user
       }
     });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Current and new password are required' });
+    }
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `New password must be at least ${MIN_PASSWORD_LENGTH} characters`
+      });
+    }
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ success: false, message: 'New password must be different from the current one' });
+    }
+
+    // req.user is the authenticated User doc (role: 'driver')
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    // Assign plaintext — the User pre-save hook hashes it. Do NOT bcrypt here (would double-hash).
+    user.password = newPassword;
+    await user.save();
+
+    return res.status(200).json({ success: true, message: 'Password changed successfully' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -250,5 +348,6 @@ module.exports = {
   updateAvailability,
   updateLocation,
   getEarnings,
-  getDriverStats
+  getDriverStats,
+  changePassword
 };

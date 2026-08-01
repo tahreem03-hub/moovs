@@ -1,13 +1,13 @@
 // driver-app/src/pages/TripDetails.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  MapPin, 
-  Clock, 
-  User, 
-  Phone, 
-  Car, 
+import {
+  ArrowLeft,
+  MapPin,
+  Clock,
+  User,
+  Phone,
+  Car,
   DollarSign,
   CheckCircle,
   Play,
@@ -15,7 +15,7 @@ import {
   Navigation
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import driverApi from '../services/api'
+import { driverApi } from '../services/api';
 
 const TripDetails = () => {
   const { id } = useParams();
@@ -35,7 +35,7 @@ const TripDetails = () => {
       setTrip(response.data.data);
     } catch (error) {
       toast.error('Failed to load trip details');
-      navigate('/driver/dashboard');
+      navigate('/dashboard');
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,7 @@ const TripDetails = () => {
 
   const handleStartTrip = async () => {
     if (!confirm('Are you sure you want to start this trip?')) return;
-    
+
     try {
       setActionLoading(true);
       await driverApi.startTrip(id);
@@ -58,7 +58,7 @@ const TripDetails = () => {
 
   const handleCompleteTrip = async () => {
     if (!confirm('Complete this trip?')) return;
-    
+
     try {
       setActionLoading(true);
       await driverApi.completeTrip(id);
@@ -90,12 +90,68 @@ const TripDetails = () => {
   const canStart = ['confirmed', 'dispatched'].includes(trip.status);
   const canComplete = trip.status === 'started';
 
+  // Safely extract customer information
+  const customerName = trip.bookingContact?.firstName && trip.bookingContact?.lastName
+    ? `${trip.bookingContact.firstName} ${trip.bookingContact.lastName}`
+    : trip.bookingContact?.name || 'Unknown Customer';
+
+  // Fix: Handle phone number which might be an object with countryCode and number
+  let customerPhone = 'N/A';
+  if (trip.bookingContact) {
+    if (trip.bookingContact.phone) {
+      // If phone is an object with countryCode and number
+      if (typeof trip.bookingContact.phone === 'object' && trip.bookingContact.phone.number) {
+        customerPhone = trip.bookingContact.phone.number;
+      } 
+      // If phone is a string
+      else if (typeof trip.bookingContact.phone === 'string') {
+        customerPhone = trip.bookingContact.phone;
+      }
+    } 
+    // Fallback to bookingContact.number if phone doesn't exist
+    else if (trip.bookingContact.number) {
+      if (typeof trip.bookingContact.number === 'object' && trip.bookingContact.number.number) {
+        customerPhone = trip.bookingContact.number.number;
+      } else if (typeof trip.bookingContact.number === 'string') {
+        customerPhone = trip.bookingContact.number;
+      }
+    }
+  }
+
+  const pickupAddress = trip.pickupLocation?.address 
+    || trip.pickupLocation?.formattedAddress 
+    || 'Address not available';
+
+  const dropoffAddress = trip.dropoffLocation?.address 
+    || trip.dropoffLocation?.formattedAddress 
+    || 'Address not available';
+
+  const pickupDateTime = trip.pickupDateTime 
+    ? new Date(trip.pickupDateTime).toLocaleString() 
+    : 'Date/Time not set';
+
+  const totalPrice = trip.pricing?.total || trip.totalPrice || 0;
+
+  // Safely extract vehicle information - handle case where vehicle might be an object or string
+  let vehicleDisplay = 'N/A';
+  if (trip.vehicle) {
+    if (typeof trip.vehicle === 'object') {
+      // If vehicle is an object, try to get name or display from it
+      const vehicleName = trip.vehicle.name || trip.vehicle.model || trip.vehicle.make || 'Vehicle';
+      const vehicleType = trip.vehicle.type || trip.vehicle.category || '';
+      vehicleDisplay = vehicleType ? `${vehicleName} (${vehicleType})` : vehicleName;
+    } else if (typeof trip.vehicle === 'string') {
+      // If vehicle is a string, display it directly
+      vehicleDisplay = trip.vehicle;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <button
-          onClick={() => navigate('/driver/dashboard')}
+          onClick={() => navigate('/dashboard')}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -113,10 +169,10 @@ const TripDetails = () => {
               trip.status === 'cancelled' ? 'bg-red-100 text-red-800' :
               'bg-yellow-100 text-yellow-800'
             }`}>
-              Status: {trip.status.toUpperCase()}
+              Status: {trip.status ? trip.status.toUpperCase() : 'UNKNOWN'}
             </div>
             <div className="text-2xl font-bold text-gray-800">
-              ${trip.pricing?.total || 0}
+              ${typeof totalPrice === 'number' ? totalPrice.toFixed(2) : '0.00'}
             </div>
           </div>
 
@@ -152,11 +208,11 @@ const TripDetails = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="flex items-center gap-2 text-gray-600">
                 <User className="w-4 h-4" />
-                {trip.bookingContact?.firstName} {trip.bookingContact?.lastName}
+                {customerName}
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Phone className="w-4 h-4" />
-                {trip.bookingContact?.phone || 'N/A'}
+                {customerPhone}
               </div>
             </div>
           </div>
@@ -169,26 +225,25 @@ const TripDetails = () => {
                 <MapPin className="w-4 h-4 mt-1 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-gray-800">Pickup</p>
-                  <p>{trip.pickupLocation?.address}</p>
+                  <p>{pickupAddress}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2 text-gray-600">
                 <MapPin className="w-4 h-4 mt-1 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-gray-800">Dropoff</p>
-                  <p>{trip.dropoffLocation?.address}</p>
+                  <p>{dropoffAddress}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Clock className="w-4 h-4" />
-                {new Date(trip.pickupDateTime).toLocaleString()}
+                {pickupDateTime}
               </div>
-              {trip.vehicle && (
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Car className="w-4 h-4" />
-                  {trip.vehicle.name} ({trip.vehicle.type})
-                </div>
-              )}
+              {/* Vehicle display - fixed to handle both object and string */}
+              <div className="flex items-center gap-2 text-gray-600">
+                <Car className="w-4 h-4" />
+                {vehicleDisplay}
+              </div>
             </div>
           </div>
 
