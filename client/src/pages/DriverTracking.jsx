@@ -39,7 +39,7 @@ const DriverTracking = () => {
 
   const toggleAvailability = async (driverId, currentStatus) => {
     try {
-      await axios.put(
+      await axios.patch(
         `${import.meta.env.VITE_URL}/driver-tracking/drivers/${driverId}/availability`,
         { isAvailable: !currentStatus },
         { withCredentials: true }

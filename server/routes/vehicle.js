@@ -18,7 +18,7 @@ router.use(authorizeOperator);
 router.post('/create', upload.array("images", 6), createVehicle);
 router.get('/my-vehicles', getAllVehicles);
 router.get('/:id', getVehicleById);
-router.put('/update/:id', updateVehicle);
+router.patch('/update/:id', updateVehicle);
 router.delete('/delete/:id', deleteVehicle);
 
 module.exports = router;

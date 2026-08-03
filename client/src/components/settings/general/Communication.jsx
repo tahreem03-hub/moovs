@@ -101,7 +101,7 @@ const Communication = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      await axios.put(`${import.meta.env.VITE_URL}/company-profile/communication`, settings);
+      await axios.patch(`${import.meta.env.VITE_URL}/company-profile/communication`, settings);
       toast.success('Communication settings saved!');
     } catch (error) {
       toast.error('Failed to save');

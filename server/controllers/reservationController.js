@@ -5,7 +5,7 @@ const Quote = require('../models/Quote');
 const Vehicle = require('../models/Vehicle');
 const Driver = require('../models/settings/Driver');
 const CompanyProfile = require('../models/settings/CompanyProfile');
-const { sendTripAssignedNotification } = require('../modules/driver/controllers/notificationController');
+const { sendTripAssignedNotification, sendTripStatusNotification } = require('../modules/driver/controllers/notificationController');
 
 // ============ CREATE RESERVATION ============
 const createReservation = async (req, res) => {
@@ -336,7 +336,7 @@ const updateReservationStatus = async (req, res) => {
       _id: id,
       operatorId: req.user._id,
       isDeleted: false
-    });
+    }).populate('driver', 'firstName lastName userId');
 
     if (!reservation) {
       return res.status(404).json({
@@ -363,27 +363,81 @@ const updateReservationStatus = async (req, res) => {
       });
     }
 
+    // Handle status-specific logic
+    if (status === 'cancelled') {
+      // Set cancellation details
+      reservation.cancellationReason = cancellationReason || 'Not specified';
+      reservation.cancelledAt = new Date();
+      reservation.cancelledBy = req.user._id;
+
+      // If driver is assigned, free them up
+      if (reservation.driver) {
+        await Driver.findByIdAndUpdate(reservation.driver._id, {
+          isAvailable: true,
+          currentTrip: null
+        });
+      }
+    }
+
+    // Update status
     reservation.status = status;
 
-    // Set timestamps
+    // Set timestamps for other statuses
     const timestampMap = {
       confirmed: 'confirmedAt',
       dispatched: 'dispatchedAt',
       started: 'startedAt',
-      completed: 'completedAt',
-      cancelled: 'cancelledAt'
+      completed: 'completedAt'
     };
 
     if (timestampMap[status]) {
       reservation[timestampMap[status]] = new Date();
     }
 
-    if (status === 'cancelled') {
-      reservation.cancellationReason = cancellationReason || 'Not specified';
-    }
-
     reservation.updatedBy = req.user._id;
     await reservation.save();
+
+    // Send notification based on status change
+    try {
+      const io = req.app.get('io');
+      
+      // For cancellation, notify driver
+      if (status === 'cancelled' && reservation.driver) {
+        await sendTripStatusNotification(
+          reservation.driver._id,
+          reservation._id,
+          'cancelled',
+          io
+        );
+      }
+      
+      // For started and completed, notify operator and customer
+      if (status === 'started' || status === 'completed') {
+        // If driver exists, send notification
+        if (reservation.driver) {
+          await sendTripStatusNotification(
+            reservation.driver._id,
+            reservation._id,
+            status,
+            io
+          );
+        }
+      }
+      
+      // For dispatched, notify driver (if not already handled by assignDriver)
+      if (status === 'dispatched' && reservation.driver) {
+        await sendTripStatusNotification(
+          reservation.driver._id,
+          reservation._id,
+          'dispatched',
+          io
+        );
+      }
+      
+    } catch (notificationError) {
+      console.error('Failed to send status notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
 
     return res.status(200).json({
       success: true,

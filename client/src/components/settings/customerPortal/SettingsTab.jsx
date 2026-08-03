@@ -185,7 +185,7 @@ const SettingsTab = () => {
 
     setSaving(true);
     try {
-      await axios.put(
+      await axios.patch(
         `${import.meta.env.VITE_URL}/company-profile/customer-portal/settings`,
         settings,
         { withCredentials: true }

@@ -33,14 +33,14 @@ export const driverApi = {
   // Driver specific endpoints
   getTrips: (params) => api.get('/driver/trips', { params }),
   getTripById: (id) => api.get(`/driver/trips/${id}`),
-  startTrip: (id) => api.put(`/driver/trips/${id}/start`),
-  completeTrip: (id) => api.put(`/driver/trips/${id}/complete`),
-  updateAvailability: (isAvailable) => api.put('/driver/availability', { isAvailable }),
+  startTrip: (id) => api.patch(`/driver/trips/${id}/start`),
+  completeTrip: (id) => api.patch(`/driver/trips/${id}/complete`),
+  updateAvailability: (isAvailable) => api.patch('/driver/availability', { isAvailable }),
   updateLocation: (location) => api.post('/driver/location', location),
   getEarnings: (params) => api.get('/driver/earnings', { params }),
   getStats: () => api.get('/driver/stats'),
   logout: () => api.get('/user/logout'),
-  changePassword: (currentPassword, newPassword) => api.put('/driver/change-password', { currentPassword, newPassword }),
+  changePassword: (currentPassword, newPassword) => api.patch('/driver/change-password', { currentPassword, newPassword }),
 
   
   uploadDocument: (file, type, expiryDate, displayName) => {
@@ -64,8 +64,8 @@ export const driverApi = {
 
   getNotifications: (params) => api.get('/driver/notifications', { params }),
   getUnreadCount: () => api.get('/driver/notifications/unread-count'),
-  markAsRead: (id) => api.put(`/driver/notifications/${id}/read`),
-  markAllAsRead: () => api.put('/driver/notifications/read-all'),
+  markAsRead: (id) => api.patch(`/driver/notifications/${id}/read`),
+  markAllAsRead: () => api.patch('/driver/notifications/read-all'),
   deleteNotification: (id) => api.delete(`/driver/notifications/${id}`),
 };
 

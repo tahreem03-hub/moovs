@@ -20,8 +20,8 @@ router.post('/create', createTripRule);
 router.get('/list', getTripRules);
 router.get('/dropdown', getTripRuleDropdown);
 router.get('/:id', getTripRuleById);
-router.put('/update/:id', updateTripRule);
-router.put('/toggle/:id', toggleTripRuleStatus);  
+router.patch('/update/:id', updateTripRule);
+router.patch('/toggle/:id', toggleTripRuleStatus);  
 router.delete('/delete/:id', deleteTripRule);
 
 module.exports = router;

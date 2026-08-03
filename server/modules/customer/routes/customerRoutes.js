@@ -37,7 +37,7 @@ router.get('/quotes', getCustomerQuotes);
 // Reservations
 router.post('/reservations', createReservation);
 router.get('/reservations', getCustomerReservations);
-router.put('/reservations/:id/cancel', cancelReservation);
+router.patch('/reservations/:id/cancel', cancelReservation);
 
 // Payments
 router.post('/reservations/:id/pay', makePayment);

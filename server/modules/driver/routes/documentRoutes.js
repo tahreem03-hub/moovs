@@ -35,6 +35,6 @@ router.get('/documents', getDocuments);
 router.get('/documents/expiring', getExpiringDocuments);
 router.get('/documents/:id', getDocumentById);
 router.delete('/documents/:id', deleteDocument);
-router.put('/documents/:id/status', updateDocumentStatus);
+router.patch('/documents/:id/status', updateDocumentStatus);
 
 module.exports = router;

@@ -10,7 +10,7 @@ router.use(authorizeOperator);
 
 router.post('/create', createPayable);
 router.get('/list', getPayables);
-router.put('/:id/status', updatePayableStatus);
+router.patch('/:id/status', updatePayableStatus);
 router.delete('/:id', deletePayable);
 
 module.exports = router;

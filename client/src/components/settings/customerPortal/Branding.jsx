@@ -100,7 +100,7 @@ const Branding = () => {
         formData.append('logo', logoFile);
       }
 
-      await axios.put(
+      await axios.patch(
         `${import.meta.env.VITE_URL}/customer-portal/branding`,
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }

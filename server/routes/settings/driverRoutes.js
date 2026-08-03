@@ -22,7 +22,7 @@ router.post('/create', upload.single('profilePicture'), createDriver);
 router.get('/list', getDrivers);
 router.get('/dropdown', getDriverDropdown);   // not used
 router.get('/:id', getDriverById);            // not used
-router.put('/update/:id', upload.single('profilePicture'), updateDriver);
+router.patch('/update/:id', upload.single('profilePicture'), updateDriver);
 router.delete('/delete/:id', deleteDriver);    //not used
 
 module.exports = router;

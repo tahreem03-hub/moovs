@@ -19,7 +19,7 @@ router.post('/create', createInsurance);
 router.get('/list', getInsurances);
 router.get('/dropdown', getInsuranceDropdown);
 router.get('/:id', getInsuranceById);
-router.put('/update/:id', updateInsurance);
+router.patch('/update/:id', updateInsurance);
 router.delete('/delete/:id', deleteInsurance);
 
 module.exports = router;

@@ -164,7 +164,7 @@ const fetchCompany = async () => {
 
     try {
       setSubmitting(true);
-      const response = await axios.put(
+      const response = await axios.patch(
         `${import.meta.env.VITE_URL}/company/update/${id}`,
         formData,
         {

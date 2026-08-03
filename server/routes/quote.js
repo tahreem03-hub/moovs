@@ -26,7 +26,7 @@ router.post('/calculate-pricing', calculatePricing);
 router.post('/create', createQuote);
 router.get('/list', getQuotes);
 router.get('/:id', getQuoteById);
-router.put('/update/:id', updateQuote);
+router.patch('/update/:id', updateQuote);
 router.patch('/:id/status', updateQuoteStatus);  // ✅ Changed PUT to PATCH
 router.delete('/delete/:id', deleteQuote);
 

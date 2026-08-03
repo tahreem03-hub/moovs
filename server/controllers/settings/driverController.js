@@ -247,7 +247,10 @@ const getDriverById = async (req, res) => {
 const getDrivers = async (req, res) => {
   try {
     const { search = '', isAvailable } = req.query;
-    const query = { isActive: true };
+    const query = { 
+      isActive: true,
+      operator: req.user._id 
+    };
     
     if (search.trim()) {
       query.$or = [

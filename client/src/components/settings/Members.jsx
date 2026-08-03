@@ -87,7 +87,7 @@ const Members = () => {
     try {
       let response;
       if (editingMember) {
-        response = await axios.put(
+        response = await axios.patch(
           `${import.meta.env.VITE_URL}/member/update/${editingMember._id}`,
           formData
         );

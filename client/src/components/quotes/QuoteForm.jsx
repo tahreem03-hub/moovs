@@ -408,7 +408,7 @@ const QuoteForm = ({
       let response;
       
       if (isEditing) {
-        response = await axios.put(`${VITE_URL}/quote/update/${id}`, payload, { 
+        response = await axios.patch(`${VITE_URL}/quote/update/${id}`, payload, { 
           withCredentials: true 
         });
         if (response.data.success) {

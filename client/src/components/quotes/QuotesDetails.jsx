@@ -112,7 +112,7 @@ const QuotesDetails = () => {
   const handleStatusChange = async (status) => {
     try {
       const VITE_URL = import.meta.env.VITE_URL;
-      const response = await axios.put(
+      const response = await axios.patch(
         `${VITE_URL}/quote/${id}/status`,
         { status },
         { withCredentials: true }

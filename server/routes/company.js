@@ -20,7 +20,7 @@ router.get('/list', getCompanies);
 
 router.get('/:id', getCompanyById);
 
-router.put('/update/:id', upload.single('photo'), updateCompany);
+router.patch('/update/:id', upload.single('photo'), updateCompany);
 
 router.delete('/delete/:id', deleteCompany);
 

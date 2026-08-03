@@ -42,8 +42,8 @@ const sendTripAssignedNotification = async (driverId, tripId, io) => {
       recipientType: 'User',
       recipientRole: 'driver',
       type: 'new_trip',
-      title: 'New Trip Assigned 🚗',
-      message: `You have been assigned a new trip from ${pickupAddress} to ${dropoffAddress}`,
+      title: 'New Trip Assignment',
+      message: `New trip assigned from ${pickupAddress} to ${dropoffAddress}`,
       data: {
         tripId: trip._id,
         pickupAddress: pickupAddress,
@@ -56,15 +56,12 @@ const sendTripAssignedNotification = async (driverId, tripId, io) => {
       actionUrl: `/driver/trips/${trip._id}`
     });
 
+    console.log('Trip assignment notification sent to driver:', driver.firstName);
   } catch (error) {
     console.error('Error sending trip assignment notification:', error);
   }
 };
 
-/**
- * Send notification for trip status update
- * Called from driver controller when trip status changes
- */
 /**
  * Send notification for trip status update
  * Called from driver controller when trip status changes
@@ -83,19 +80,19 @@ const sendTripStatusNotification = async (driverId, tripId, status, io) => {
     
     const statusMessages = {
       'started': {
-        title: 'Trip Started 🚗',
+        title: 'Trip Started',
         message: `Driver ${driver.firstName} ${driver.lastName} started trip #${trip.reservationNumber || trip._id.slice(-6)}`
       },
       'completed': {
-        title: 'Trip Completed ✅',
+        title: 'Trip Completed',
         message: `Driver ${driver.firstName} ${driver.lastName} completed trip #${trip.reservationNumber || trip._id.slice(-6)}`
       },
       'cancelled': {
-        title: 'Trip Cancelled ❌',
+        title: 'Trip Cancelled',
         message: `Trip #${trip.reservationNumber || trip._id.slice(-6)} has been cancelled`
       },
       'dispatched': {
-        title: 'Trip Dispatched 📍',
+        title: 'Trip Dispatched',
         message: `Trip #${trip.reservationNumber || trip._id.slice(-6)} is ready for pickup`
       }
     };
@@ -125,19 +122,19 @@ const sendTripStatusNotification = async (driverId, tripId, status, io) => {
           actionUrl: `/operator/trips/${trip._id}`
         });
 
-        console.log(`✅ Trip status notification sent to operator for trip ${trip.reservationNumber}`);
+        console.log('Trip status notification sent to operator:', trip.reservationNumber);
       }
 
-      // Notify customer (existing code - keep as is)
+      // Notify customer
       if (trip.bookingContact) {
         await notificationService.createNotification({
           recipient: trip.bookingContact._id,
           recipientType: 'Contact',
           recipientRole: 'customer',
           type: 'trip_update',
-          title: status === 'started' ? 'Your Driver is on the Way 🚗' : 'Trip Completed ✅',
+          title: status === 'started' ? 'Driver En Route' : 'Trip Complete',
           message: status === 'started' 
-            ? `${driver.firstName} ${driver.lastName} has started your trip`
+            ? `${driver.firstName} ${driver.lastName} is on their way to pick you up`
             : 'Your trip has been completed. Thank you for riding with us!',
           data: {
             tripId: trip._id,
@@ -149,7 +146,7 @@ const sendTripStatusNotification = async (driverId, tripId, status, io) => {
         });
       }
     } 
-    // For 'cancelled' and 'dispatched', keep the existing behavior (notify driver)
+    // For 'cancelled' and 'dispatched' (notify driver)
     else {
       await notificationService.createNotification({
         recipient: driver.userId,
@@ -168,7 +165,7 @@ const sendTripStatusNotification = async (driverId, tripId, status, io) => {
         actionUrl: `/driver/trips/${trip._id}`
       });
 
-      console.log(`✅ Trip status notification sent to driver ${driver.firstName}`);
+      console.log('Trip status notification sent to driver:', driver.firstName);
     }
   } catch (error) {
     console.error('Error sending trip status notification:', error);
@@ -191,22 +188,22 @@ const sendDocumentNotification = async (driverId, document, status, io) => {
     
     const statusMessages = {
       'uploaded': {
-        title: 'Document Uploaded 📄',
+        title: 'Document Uploaded',
         message: `Your ${document.displayName} has been uploaded and is pending review`,
         type: 'document_approved'
       },
       'approved': {
-        title: 'Document Approved ✅',
-        message: `Your ${document.displayName} has been approved!`,
+        title: 'Document Approved',
+        message: `Your ${document.displayName} has been approved`,
         type: 'document_approved'
       },
       'rejected': {
-        title: 'Document Rejected ❌',
+        title: 'Document Rejected',
         message: `Your ${document.displayName} has been rejected${document.rejectionReason ? `: ${document.rejectionReason}` : ''}`,
         type: 'document_rejected'
       },
       'expiring': {
-        title: 'Document Expiring Soon ⚠️',
+        title: 'Document Expiring Soon',
         message: `Your ${document.displayName} will expire on ${new Date(document.expiryDate).toLocaleDateString()}`,
         type: 'document_rejected'
       }
@@ -233,7 +230,7 @@ const sendDocumentNotification = async (driverId, document, status, io) => {
       actionUrl: `/driver/profile#documents`
     });
 
-    console.log(`✅ Document notification sent to driver ${driver.firstName}`);
+    console.log('Document notification sent to driver:', driver.firstName);
   } catch (error) {
     console.error('Error sending document notification:', error);
   }
@@ -260,8 +257,8 @@ const sendPaymentNotification = async (driverId, tripId, amount, io) => {
       recipientType: 'User',
       recipientRole: 'driver',
       type: 'payment_received',
-      title: 'Payment Received 💰',
-      message: `You received $${amount.toFixed(2)} for trip #${trip.reservationNumber || trip._id.slice(-6)}`,
+      title: 'Payment Received',
+      message: `$${amount.toFixed(2)} received for trip #${trip.reservationNumber || trip._id.slice(-6)}`,
       data: {
         tripId: trip._id,
         amount: amount,
@@ -271,46 +268,12 @@ const sendPaymentNotification = async (driverId, tripId, amount, io) => {
       actionUrl: `/driver/earnings`
     });
 
-    console.log(`✅ Payment notification sent to driver ${driver.firstName}`);
+    console.log('Payment notification sent to driver:', driver.firstName);
   } catch (error) {
     console.error('Error sending payment notification:', error);
   }
 };
 
-/**
- * Send notification for availability status change
- * Called from driver controller when toggling availability
- */
-const sendAvailabilityNotification = async (driverId, isAvailable, io) => {
-  try {
-    const driver = await Driver.findById(driverId);
-    if (!driver) {
-      console.error('Driver not found for notification');
-      return;
-    }
-
-    const notificationService = new NotificationService(io);
-
-    await notificationService.createNotification({
-      recipient: driver.userId,
-      recipientType: 'User',
-      recipientRole: 'driver',
-      type: 'system_alert',
-      title: isAvailable ? 'You are Online 🟢' : 'You are Offline 🔴',
-      message: isAvailable 
-        ? 'You are now available to receive trip assignments' 
-        : 'You are now offline and will not receive new trips',
-      data: {
-        isAvailable: isAvailable
-      },
-      priority: 'low'
-    });
-
-    console.log(`✅ Availability notification sent to driver ${driver.firstName}`);
-  } catch (error) {
-    console.error('Error sending availability notification:', error);
-  }
-};
 
 /**
  * Send notification for expiring documents (cron job)
@@ -339,7 +302,7 @@ const sendExpiringDocumentNotifications = async (io) => {
           recipientType: 'User',
           recipientRole: 'driver',
           type: 'document_rejected',
-          title: 'Document Expiring Soon ⚠️',
+          title: 'Document Expiring Soon',
           message: `Your ${doc.displayName} will expire on ${new Date(doc.expiryDate).toLocaleDateString()}. Please upload a new one.`,
           data: {
             documentId: doc._id,
@@ -353,7 +316,7 @@ const sendExpiringDocumentNotifications = async (io) => {
       }
     }
 
-    console.log(`✅ Sent ${expiringDocs.length} expiring document notifications`);
+    console.log('Sent expiring document notifications:', expiringDocs.length);
   } catch (error) {
     console.error('Error sending expiring document notifications:', error);
   }
@@ -364,6 +327,5 @@ module.exports = {
   sendTripStatusNotification,
   sendDocumentNotification,
   sendPaymentNotification,
-  sendAvailabilityNotification,
   sendExpiringDocumentNotifications
 };

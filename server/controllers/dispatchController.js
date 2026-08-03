@@ -35,10 +35,9 @@ const getDispatchBoard = async (req, res) => {
 
     // Get available drivers
     const drivers = await Driver.find({
-      operatorId: req.user._id,
+      operator: req.user._id,
       isActive: true,
-      isAvailable: true
-    }).select('firstName lastName').lean();
+    }).select('firstName lastName isAvailable').lean();
 
     // Group by status for Kanban
     const kanban = {
@@ -63,48 +62,6 @@ const getDispatchBoard = async (req, res) => {
   }
 };
 
-// Assign driver to reservation
-const assignDriver = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { driverId } = req.body;
-
-    const reservation = await Reservation.findOne({
-      _id: id,
-      operatorId: req.user._id,
-      isDeleted: false
-    });
-
-    if (!reservation) return res.status(404).json({ success: false, message: 'Reservation not found' });
-
-    const driver = await Driver.findOne({
-      _id: driverId,
-      operatorId: req.user._id,
-      isActive: true
-    });
-
-    if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
-
-    reservation.driver = driverId;
-    reservation.status = 'dispatched';
-    reservation.dispatchedAt = new Date();
-    await reservation.save();
-
-    // Send notification to driver
-    const io = req.app.get('io');
-    await sendTripAssignedNotification(driverId, tripId, io);
-
-
-    return res.status(200).json({
-      success: true,
-      message: `Driver ${driver.firstName} assigned`,
-      data: reservation
-    });
-  } catch (error) {
-    console.error('Assign driver error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to assign driver' });
-  }
-};
 
 // Update reservation status (drag & drop)
 const updateStatus = async (req, res) => {
@@ -136,4 +93,4 @@ const updateStatus = async (req, res) => {
   }
 };
 
-module.exports = { getDispatchBoard, assignDriver, updateStatus };
+module.exports = { getDispatchBoard, updateStatus };

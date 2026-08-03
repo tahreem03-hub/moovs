@@ -1,4 +1,3 @@
-// modules/driver/routes/notificationRoutes.js
 const express = require('express');
 const router = express.Router();
 const { isAuthenticated, authorizeDriver } = require('../../../middleware/auth');
@@ -49,7 +48,7 @@ router.get('/notifications/unread-count', isAuthenticated, authorizeDriver, asyn
 });
 
 // Mark notification as read
-router.put('/notifications/:id/read', isAuthenticated, authorizeDriver, async (req, res) => {
+router.patch('/notifications/:id/read', isAuthenticated, authorizeDriver, async (req, res) => {
   try {
     const notificationService = getNotificationService(req);
     const notification = await notificationService.markAsRead(req.params.id, req.user._id);
@@ -65,7 +64,7 @@ router.put('/notifications/:id/read', isAuthenticated, authorizeDriver, async (r
 });
 
 // Mark all as read
-router.put('/notifications/read-all', isAuthenticated, authorizeDriver, async (req, res) => {
+router.patch('/notifications/read-all', isAuthenticated, authorizeDriver, async (req, res) => {
   try {
     const notificationService = getNotificationService(req);
     const result = await notificationService.markAllAsRead(req.user._id, 'User');

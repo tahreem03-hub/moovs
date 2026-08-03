@@ -16,7 +16,7 @@ router.use(authorizeAdmin);
 router.get('/pending-requests', getPendingRequests);
 
 // Approve/reject requests
-router.put('/approve/:requestId', approveRequest);
-router.put('/reject/:requestId', rejectRequest);
+router.patch('/approve/:requestId', approveRequest);
+router.patch('/reject/:requestId', rejectRequest);
 
 module.exports = router;

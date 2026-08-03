@@ -348,7 +348,7 @@ const ReservationForm = ({ isFormOpen, isEdit = false, quoteId = null }) => {
       let response;
 
       if (isEditing) {
-        response = await axios.put(`${VITE_URL}/reservation/update/${editingId}`, payload, {
+        response = await axios.patch(`${VITE_URL}/reservation/update/${editingId}`, payload, {
           withCredentials: true
         });
         toast.success('Reservation updated successfully');

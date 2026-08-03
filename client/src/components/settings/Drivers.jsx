@@ -118,7 +118,7 @@ const Drivers = () => {
     try {
       let response;
       if (editingDriver) {
-        response = await axios.put(
+        response = await axios.patch(
           `${import.meta.env.VITE_URL}/settings/driver/update/${editingDriver._id}`,
           formDataToSend,
           { headers: { 'Content-Type': 'multipart/form-data' } }
@@ -193,7 +193,7 @@ const Drivers = () => {
 
   const toggleAvailability = async (id, currentStatus) => {
     try {
-      const response = await axios.put(
+      const response = await axios.patch(
         `${import.meta.env.VITE_URL}/settings/driver/update/${id}`,
         { isAvailable: !currentStatus }
       );

@@ -24,16 +24,16 @@ router.use(authorizeDriver);
 router.get('/profile', getDriverProfile);
 
 // Account
-router.put('/change-password', changePassword);
+router.patch('/change-password', changePassword);
 
 // Trips
 router.get('/trips', getDriverTrips);
 router.get('/trips/:id', getDriverTripById);
-router.put('/trips/:id/start', startTrip);
-router.put('/trips/:id/complete', completeTrip);
+router.patch('/trips/:id/start', startTrip);
+router.patch('/trips/:id/complete', completeTrip);
 
 // Availability
-router.put('/availability', updateAvailability);
+router.patch('/availability', updateAvailability);
 
 // Location
 router.post('/location', updateLocation);

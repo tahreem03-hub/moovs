@@ -42,7 +42,7 @@ const InvoiceView = () => {
 
   const handleMarkPaid = async () => {
     try {
-      await axios.put(`${import.meta.env.VITE_URL}/invoice/${id}/mark-paid`, {}, {
+      await axios.patch(`${import.meta.env.VITE_URL}/invoice/${id}/mark-paid`, {}, {
         withCredentials: true
       });
       toast.success('Invoice marked as paid');

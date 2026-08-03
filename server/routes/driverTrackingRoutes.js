@@ -10,6 +10,6 @@ router.use(authorizeOperator);
 
 router.get('/drivers', getDrivers);
 router.get('/drivers/:id', getDriverDetails);
-router.put('/drivers/:id/availability', updateAvailability);  
+router.patch('/drivers/:id/availability', updateAvailability);  
 
 module.exports = router;

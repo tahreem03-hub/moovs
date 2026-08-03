@@ -19,7 +19,7 @@ router.post('/create', createTerms);
 router.get('/list', getTerms);
 router.get('/default', getDefaultTerms);
 router.get('/:id', getTermsById);
-router.put('/update/:id', updateTerms);
+router.patch('/update/:id', updateTerms);
 router.delete('/delete/:id', deleteTerms);
 
 module.exports = router;

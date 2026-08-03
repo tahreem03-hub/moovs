@@ -22,10 +22,10 @@ export const createQuote = (data) =>
   api.post('/quote/create', data);
 
 export const updateQuote = (id, data) => 
-  api.put(`/quote/update/${id}`, data);
+  api.patch(`/quote/update/${id}`, data);
 
 export const updateQuoteStatus = (id, status) => 
-  api.put(`/quote/${id}/status`, { status });
+  api.patch(`/quote/${id}/status`, { status });
 
 export const deleteQuote = (id) => 
   api.delete(`/quote/delete/${id}`);

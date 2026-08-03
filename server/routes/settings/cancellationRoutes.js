@@ -22,7 +22,7 @@ router.post('/create', createPolicy);
 router.get('/list', getPolicies);
 router.get('/dropdown', getPolicyDropdown);
 router.get('/:id', getPolicyById);
-router.put('/update/:id', updatePolicy);
+router.patch('/update/:id', updatePolicy);
 router.delete('/delete/:id', deletePolicy);
 
 module.exports = router;

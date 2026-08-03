@@ -6,7 +6,6 @@ const User = require('../../../models/User');   // add near the other requires
 
 const {
   sendTripStatusNotification,
-  sendAvailabilityNotification
 } = require('./notificationController')
 
 // ============ CHANGE PASSWORD ============
@@ -227,9 +226,6 @@ const updateAvailability = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Driver profile not found' });
     }
 
-    // ============ SEND NOTIFICATION ============
-    const io = req.app.get('io');
-    await sendAvailabilityNotification(driver._id, isAvailable, io);
 
     return res.status(200).json({
       success: true,
@@ -259,8 +255,6 @@ const updateLocation = async (req, res) => {
   }
 };
 
-// ============ EARNINGS ============
-// modules/driver/controllers/driverController.js
 
 // ============ EARNINGS ============
 const getEarnings = async (req, res) => {

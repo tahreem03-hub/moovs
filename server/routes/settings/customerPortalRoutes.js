@@ -20,16 +20,16 @@ router.use(authorizeOperator);
 router.get('/', getCustomerPortalSettings);
 
 // Payments Tab
-router.put('/payments', updatePaymentSettings);
+router.patch('/payments', updatePaymentSettings);
 
 // Settings Tab
-router.put('/settings', updateSettingsTab);
+router.patch('/settings', updateSettingsTab);
 
 // Branding Tab
-router.put('/branding', upload.single('logo'), updateBranding);
+router.patch('/branding', upload.single('logo'), updateBranding);
 
 // Promo Codes Tab
-router.put('/promo-codes', updatePromoCodes);
+router.patch('/promo-codes', updatePromoCodes);
 
 // Get vehicles for dropdown
 router.get('/vehicles', getVehiclesForDropdown);

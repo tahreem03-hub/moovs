@@ -28,13 +28,13 @@ export const createOperator = (data) =>
   api.post('/admin/operators', data);
 
 export const updateOperator = (id, data) => 
-  api.put(`/admin/operators/${id}`, data);
+  api.patch(`/admin/operators/${id}`, data);
 
 export const deleteOperator = (id) => 
   api.delete(`/admin/operators/${id}`);
 
 export const toggleOperatorStatus = (id) => 
-  api.put(`/admin/operators/${id}/toggle`);
+  api.patch(`/admin/operators/${id}/toggle`);
 
 // ============ OPERATOR DETAILS ============
 export const getOperatorCompanies = (id) => 

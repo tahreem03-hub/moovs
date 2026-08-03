@@ -22,7 +22,7 @@ router.get('/dropdown', getContactDropdown);
 
 router.get('/:id', getContactById);
 
-router.put('/update/:id', updateContact);
+router.patch('/update/:id', updateContact);
 
 router.delete('/delete/:id', deleteContact);
 

@@ -121,7 +121,7 @@ const Company = () => {
       });
       if (logo) formDataToSend.append('logo', logo);
 
-      await axios.put(
+      await axios.patch(
         `${import.meta.env.VITE_URL}/company-profile/profile`,
         formDataToSend,
         { headers: { 'Content-Type': 'multipart/form-data' } }

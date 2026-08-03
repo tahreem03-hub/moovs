@@ -1,4 +1,3 @@
-// driver-app/src/components/driver/Notifications.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Bell, CheckCircle, Clock, AlertCircle, X,

@@ -79,7 +79,7 @@ const Payments = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      await axios.put(
+      await axios.patch(
         `${import.meta.env.VITE_URL}/customer-portal/payments`,
         settings
       );

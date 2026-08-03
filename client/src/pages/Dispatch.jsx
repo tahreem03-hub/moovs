@@ -56,7 +56,7 @@ const Dispatch = () => {
 
   const handleStatusChange = async (reservationId, newStatus) => {
     try {
-      await axios.put(
+      await axios.patch(
         `${import.meta.env.VITE_URL}/dispatch/${reservationId}/status`,
         { status: newStatus },
         { withCredentials: true }
@@ -75,7 +75,7 @@ const Dispatch = () => {
     }
     try {
       await axios.post(
-        `${import.meta.env.VITE_URL}/dispatch/${selectedReservation}/assign-driver`,
+        `${import.meta.env.VITE_URL}/reservation/${selectedReservation}/assign-driver`,
         { driverId: selectedDriver },
         { withCredentials: true }
       );
@@ -181,17 +181,6 @@ const Dispatch = () => {
                     </div>
                   )}
                   <div className="flex gap-1 mt-2 flex-wrap">
-                    {!reservation.driver && status !== 'completed' && (
-                      <button
-                        onClick={() => {
-                          setSelectedReservation(reservation._id);
-                          setShowAssignModal(true);
-                        }}
-                        className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded hover:bg-purple-200"
-                      >
-                        Assign
-                      </button>
-                    )}
                     {status === 'pending' && (
                       <button
                         onClick={() => handleStatusChange(reservation._id, 'confirmed')}
@@ -200,22 +189,47 @@ const Dispatch = () => {
                         Confirm
                       </button>
                     )}
+
                     {status === 'confirmed' && (
-                      <button
-                        onClick={() => handleStatusChange(reservation._id, 'dispatched')}
-                        className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded hover:bg-purple-200"
-                      >
-                        Dispatch
-                      </button>
+                      <>
+                        <button
+                          onClick={() => {
+                            setSelectedReservation(reservation._id);
+                            setShowAssignModal(true);
+                          }}
+                          className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded hover:bg-purple-200"
+                        >
+                          {reservation.driver ? 'Change Driver' : 'Assign Driver'}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (!reservation.driver) {
+                              toast.error('Please assign a driver before dispatching');
+                              return;
+                            }
+                            handleStatusChange(reservation._id, 'dispatched');
+                          }}
+                          className={`text-xs px-2 py-0.5 rounded ${reservation.driver
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            }`}
+                          title={!reservation.driver ? 'Assign a driver first' : ''}
+                        >
+                          Dispatch
+                        </button>
+                      </>
                     )}
+
                     {status === 'dispatched' && (
                       <button
                         onClick={() => handleStatusChange(reservation._id, 'started')}
                         className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded hover:bg-green-200"
                       >
-                        Start
+                        Start Trip
                       </button>
                     )}
+
                     {status === 'started' && (
                       <button
                         onClick={() => handleStatusChange(reservation._id, 'completed')}
@@ -247,7 +261,7 @@ const Dispatch = () => {
             >
               <option value="">Select a driver</option>
               {board.drivers.map(d => (
-                <option key={d._id} value={d._id}>{d.firstName} {d.lastName}</option>
+                <option key={d._id} value={d._id}>{d.firstName} {d.lastName} {d.isAvailable ? '(Available)' : '(Unavailable)'}</option>
               ))}
             </select>
             <div className="flex gap-2 justify-end">

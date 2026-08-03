@@ -35,7 +35,7 @@ router.get('/list', getReservations);
 router.get('/:id', getReservationById);
 
 // Update
-router.put('/update/:id', updateReservation);
+router.patch('/update/:id', updateReservation);
 
 // Status
 router.post('/:id/status', updateReservationStatus);

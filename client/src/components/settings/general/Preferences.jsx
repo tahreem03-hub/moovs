@@ -324,7 +324,7 @@ const Preferences = () => {
         }
       };
 
-      await axios.put(`${import.meta.env.VITE_URL}/company-profile/preferences`, payload);
+      await axios.patch(`${import.meta.env.VITE_URL}/company-profile/preferences`, payload);
       toast.success('Preferences saved');
       setShowAddPricing(false);
     } catch (error) {

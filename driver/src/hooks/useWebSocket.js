@@ -3,32 +3,25 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 
-const emojiFor = (type) =>
+const getNotificationLabel = (type) =>
   ({
-    new_trip: '🚗',
-    trip_update: '📝',
-    trip_cancelled: '❌',
-    message: '💬',
-    payment_received: '💰',
-    document_expiring: '⚠️',
-    document_approved: '✅',
-    document_rejected: '❌',
-    rating_received: '⭐',
-    system_alert: '🔔',
-  }[type] || '🔔');
+    new_trip: 'New Trip Assignment',
+    trip_update: 'Trip Update',
+    trip_cancelled: 'Trip Cancelled',
+    message: 'New Message',
+    payment_received: 'Payment Received',
+    document_expiring: 'Document Expiring',
+    document_approved: 'Document Approved',
+    document_rejected: 'Document Rejected',
+    rating_received: 'New Rating',
+    system_alert: 'System Alert',
+  }[type] || 'Notification');
 
-/**
- * driverId here must be the USER _id (that's what the server rooms + notification
- * recipients key on — see notificationService: room `driver-<recipient>` where
- * recipient = driver.userId).
- */
 export const useWebSocket = (driverId, userId, onNotification) => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
   const socketRef = useRef(null);
 
-  // Keep the latest callback in a ref so a new inline function each render
-  // does NOT tear down and recreate the socket.
   const onNotificationRef = useRef(onNotification);
   useEffect(() => {
     onNotificationRef.current = onNotification;
@@ -37,7 +30,6 @@ export const useWebSocket = (driverId, userId, onNotification) => {
   useEffect(() => {
     if (!driverId) return;
 
-    // Socket.IO uses an http(s) URL and upgrades to WS itself — not ws://
     const url = import.meta.env.VITE_WS_URL || 'http://localhost:8000';
     const socket = io(url, {
       query: { driverId, userId, role: 'driver' },
@@ -54,20 +46,36 @@ export const useWebSocket = (driverId, userId, onNotification) => {
       setIsConnected(false);
     });
 
-    // Server's confirmation event
     socket.on('connected', (data) => {
       console.log('Realtime ready:', data?.message);
     });
 
     socket.on('notification', (payload) => {
-      // Server emits { id, ... }; the UI keys on _id, so normalize.
       const notification = { ...payload, _id: payload._id || payload.id };
       setLastMessage(notification);
 
-      toast[notification.priority === 'urgent' ? 'error' : 'success'](notification.message, {
-        duration: notification.priority === 'urgent' ? 10000 : 5000,
-        icon: emojiFor(notification.type),
-      });
+      const label = getNotificationLabel(notification.type);
+      const isUrgent = notification.priority === 'urgent' || notification.priority === 'high';
+      
+      // Professional toast with clean design - using object style instead of JSX
+      toast(
+        `${label}: ${notification.message}`,
+        {
+          duration: isUrgent ? 8000 : 5000,
+          position: 'top-right',
+          style: {
+            background: '#FFFFFF',
+            color: '#111827',
+            padding: '14px 18px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+            borderLeft: `4px solid ${isUrgent ? '#EF4444' : '#10B981'}`,
+            fontWeight: '500',
+            fontSize: '14px',
+            maxWidth: '420px',
+          },
+        }
+      );
 
       onNotificationRef.current?.(notification);
     });
@@ -77,7 +85,6 @@ export const useWebSocket = (driverId, userId, onNotification) => {
       socket.disconnect();
       socketRef.current = null;
     };
-    // NOTE: onNotification intentionally excluded — handled via ref above.
   }, [driverId, userId]);
 
   const sendMessage = useCallback((event, data) => {

@@ -27,7 +27,7 @@ router.get('/subscription-stats', getSubscriptionStats);
 router.get('/operators', getOperators);
 router.get('/operators/:id', getOperatorById);
 router.post('/operators', createOperator);
-router.put('/operators/:id', updateOperator);
+router.patch('/operators/:id', updateOperator);
 router.delete('/operators/:id', deleteOperator);
 router.patch('/operators/:id/toggle', toggleOperatorStatus);
 

@@ -71,7 +71,7 @@ const Payments = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      await axios.put(`${import.meta.env.VITE_URL}/company-profile/payments`, settings);
+      await axios.patch(`${import.meta.env.VITE_URL}/company-profile/payments`, settings);
       toast.success('Payment settings saved!');
     } catch (error) {
       toast.error('Failed to save');

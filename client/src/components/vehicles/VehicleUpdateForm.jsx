@@ -185,7 +185,7 @@ const VehicleUpdateForm = ({ onVehicleUpdated }) => {
 
     try {
       setSubmitting(true);
-      const response = await axios.put(
+      const response = await axios.patch(
         `${import.meta.env.VITE_URL}/vehicle/update/${id}`,
         form,
         {

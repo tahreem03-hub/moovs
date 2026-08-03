@@ -19,7 +19,7 @@ router.post('/create', createMember);
 router.get('/list', getMembers);
 router.get('/dropdown', getMemberDropdown);
 router.get('/:id', getMemberById);
-router.put('/update/:id', updateMember);
+router.patch('/update/:id', updateMember);
 router.delete('/delete/:id', deleteMember);
 
 module.exports = router;
