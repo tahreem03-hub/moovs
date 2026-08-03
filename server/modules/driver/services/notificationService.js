@@ -61,48 +61,52 @@ class NotificationService {
 
   // Get notifications for a user
   async getNotifications(recipient, recipientType, options = {}) {
-    const {
-      page = 1,
-      limit = 20,
-      unreadOnly = false,
-      type = null
-    } = options;
+  // 1. read raw values first
+  const {
+    unreadOnly = false,
+    type = null
+  } = options;
 
-    const query = {
-      recipient: recipient,
-      recipientType: recipientType,
-      isDeleted: false
-    };
+  // 2. then coerce numbers (separate names, since we're transforming them)
+  const page = Number(options.page) || 1;
+  const limit = Number(options.limit) || 20;
 
-    if (unreadOnly) {
-      query.read = false;
-    }
+  const query = {
+    recipient: recipient,
+    recipientType: recipientType,
+    isDeleted: false
+  };
 
-    if (type) {
-      query.type = type;
-    }
-
-    const skip = (page - 1) * limit;
-
-    const [notifications, total] = await Promise.all([
-      Notification.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Notification.countDocuments(query)
-    ]);
-
-    return {
-      notifications,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    };
+  const wantUnread = unreadOnly === true || unreadOnly === 'true';
+  if (wantUnread) {
+    query.read = false;
   }
+
+  if (type) {
+    query.type = type;
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [notifications, total] = await Promise.all([
+    Notification.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Notification.countDocuments(query)
+  ]);
+
+  return {
+    notifications,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit)
+    }
+  };
+}
 
   // Mark notification as read
   async markAsRead(notificationId, recipient) {

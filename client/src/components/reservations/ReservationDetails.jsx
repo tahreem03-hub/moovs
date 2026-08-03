@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, User, Calendar, MapPin, Car, DollarSign,
     MessageSquare, Send, Edit2, Trash2, Phone, Mail,
-    Building2, FileText, Users, X, UserPlus, Truck
+    Building2, FileText, Users, X, UserPlus, Truck, Eye
 } from 'lucide-react';
 import reservationService from '../../services/reservationServices';
 import ReservationStatusBadge from './ReservationStatusBadge';
@@ -57,6 +57,8 @@ const ReservationDetails = () => {
             fetchDrivers();
         }
     }, [id]);
+
+    console.log(drivers)
 
     const fetchReservation = async () => {
         try {
@@ -237,7 +239,7 @@ const ReservationDetails = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        {!reservation.driver && reservation.status !== 'cancelled' && (
+                        {!reservation.driver && ['confirmed'].includes(reservation.status) && (
                             <button
                                 onClick={() => setShowAssignDriver(true)}
                                 className="px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors flex items-center gap-1"

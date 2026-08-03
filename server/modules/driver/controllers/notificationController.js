@@ -6,6 +6,13 @@ const DriverDocument = require('../models/DriverDocument');
 
 // Helper to get driver doc
 const getDriverDoc = async (userId) => Driver.findOne({ userId });
+const stopAddr = (trip, type) => {
+  const s = trip.stops?.find((x) => x.type === type);
+  if (!s) return type;
+  if (s.locationType === 'airport' && s.airport) return s.airport.code || s.airport.name || 'airport';
+  const a = s.address;
+  return [a?.street, a?.city].filter(Boolean).join(', ') || `${type} location`;
+};
 
 /**
  * Send notification for new trip assignment
@@ -24,8 +31,8 @@ const sendTripAssignedNotification = async (driverId, tripId, io) => {
 
     const notificationService = new NotificationService(io);
     
-    const pickupAddress = trip.pickupLocation?.address || 'pickup location';
-    const dropoffAddress = trip.dropoffLocation?.address || 'dropoff location';
+    const pickupAddress = stopAddr(trip, 'pickup') || 'pickup location';
+    const dropoffAddress = stopAddr(trip, 'dropoff') || 'dropoff location';
     const customerName = trip.bookingContact 
       ? `${trip.bookingContact.firstName} ${trip.bookingContact.lastName}` 
       : 'Customer';
@@ -59,6 +66,10 @@ const sendTripAssignedNotification = async (driverId, tripId, io) => {
  * Send notification for trip status update
  * Called from driver controller when trip status changes
  */
+/**
+ * Send notification for trip status update
+ * Called from driver controller when trip status changes
+ */
 const sendTripStatusNotification = async (driverId, tripId, status, io) => {
   try {
     const driver = await Driver.findById(driverId);
@@ -74,11 +85,11 @@ const sendTripStatusNotification = async (driverId, tripId, status, io) => {
     const statusMessages = {
       'started': {
         title: 'Trip Started 🚗',
-        message: `You have started trip #${trip.reservationNumber || trip._id.slice(-6)}`
+        message: `Driver ${driver.firstName} ${driver.lastName} started trip #${trip.reservationNumber || trip._id.slice(-6)}`
       },
       'completed': {
         title: 'Trip Completed ✅',
-        message: `You have completed trip #${trip.reservationNumber || trip._id.slice(-6)}`
+        message: `Driver ${driver.firstName} ${driver.lastName} completed trip #${trip.reservationNumber || trip._id.slice(-6)}`
       },
       'cancelled': {
         title: 'Trip Cancelled ❌',
@@ -93,44 +104,72 @@ const sendTripStatusNotification = async (driverId, tripId, status, io) => {
     const statusInfo = statusMessages[status];
     if (!statusInfo) return;
 
-    await notificationService.createNotification({
-      recipient: driver.userId,
-      recipientType: 'User',
-      recipientRole: 'driver',
-      type: 'trip_update',
-      title: statusInfo.title,
-      message: statusInfo.message,
-      data: {
-        tripId: trip._id,
-        status: status,
-        reservationNumber: trip.reservationNumber,
-        earnings: trip.pricing?.total || 0
-      },
-      priority: status === 'cancelled' ? 'high' : 'medium',
-      actionUrl: `/driver/trips/${trip._id}`
-    });
+    // For 'started' and 'completed', notify the operator (not the driver)
+    if (status === 'started' || status === 'completed') {
+      // Notify operator/dispatcher
+      if (trip.operatorId) {
+        await notificationService.createNotification({
+          recipient: trip.operatorId,
+          recipientType: 'User',
+          recipientRole: 'operator',
+          type: 'trip_update',
+          title: statusInfo.title,
+          message: statusInfo.message,
+          data: {
+            tripId: trip._id,
+            status: status,
+            reservationNumber: trip.reservationNumber,
+            driverName: `${driver.firstName} ${driver.lastName}`,
+            earnings: trip.pricing?.total || 0
+          },
+          priority: 'high',
+          actionUrl: `/operator/trips/${trip._id}`
+        });
 
-    console.log(`✅ Trip status notification sent to driver ${driver.firstName}`);
+        console.log(`✅ Trip status notification sent to operator for trip ${trip.reservationNumber}`);
+      }
 
-    // Also notify customer if trip is started or completed
-    if (trip.bookingContact && (status === 'started' || status === 'completed')) {
+      // Notify customer (existing code)
+      if (trip.bookingContact) {
+        await notificationService.createNotification({
+          recipient: trip.bookingContact._id,
+          recipientType: 'Contact',
+          recipientRole: 'customer',
+          type: 'trip_update',
+          title: status === 'started' ? 'Your Driver is on the Way 🚗' : 'Trip Completed ✅',
+          message: status === 'started' 
+            ? `${driver.firstName} ${driver.lastName} has started your trip`
+            : 'Your trip has been completed. Thank you for riding with us!',
+          data: {
+            tripId: trip._id,
+            driverName: `${driver.firstName} ${driver.lastName}`,
+            status: status
+          },
+          priority: 'high',
+          actionUrl: `/customer/trips/${trip._id}`
+        });
+      }
+    } 
+    // For 'cancelled' and 'dispatched', keep the existing behavior (notify driver)
+    else {
       await notificationService.createNotification({
-        recipient: trip.bookingContact._id,
-        recipientType: 'Contact',
-        recipientRole: 'customer',
+        recipient: driver.userId,
+        recipientType: 'User',
+        recipientRole: 'driver',
         type: 'trip_update',
-        title: status === 'started' ? 'Your Driver is on the Way 🚗' : 'Trip Completed ✅',
-        message: status === 'started' 
-          ? `${driver.firstName} ${driver.lastName} has started your trip`
-          : 'Your trip has been completed. Thank you for riding with us!',
+        title: statusInfo.title,
+        message: statusInfo.message,
         data: {
           tripId: trip._id,
-          driverName: `${driver.firstName} ${driver.lastName}`,
-          status: status
+          status: status,
+          reservationNumber: trip.reservationNumber,
+          earnings: trip.pricing?.total || 0
         },
-        priority: 'high',
-        actionUrl: `/customer/trips/${trip._id}`
+        priority: status === 'cancelled' ? 'high' : 'medium',
+        actionUrl: `/driver/trips/${trip._id}`
       });
+
+      console.log(`✅ Trip status notification sent to driver ${driver.firstName}`);
     }
   } catch (error) {
     console.error('Error sending trip status notification:', error);

@@ -1,9 +1,9 @@
 // driver-app/src/components/driver/Notifications.jsx
 import React, { useState, useEffect } from 'react';
-import { 
-  Bell, CheckCircle, Clock, AlertCircle, X, 
-  Car, DollarSign, MessageCircle, Loader2, 
-  Star, FileText 
+import {
+  Bell, CheckCircle, Clock, AlertCircle, X,
+  Car, DollarSign, MessageCircle, Loader2,
+  Star, FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { driverApi } from '../../services/api';
@@ -56,15 +56,8 @@ const Notifications = ({ driverId, userId }) => {
 
   // WebSocket connection for real-time notifications
   const { isConnected } = useWebSocket(driverId, userId, (notification) => {
-    // Add new notification to list
-    setNotifications(prev => [notification, ...prev]);
-    setUnreadCount(prev => prev + 1);
-    
-    // Show toast
-    toast.success(notification.message, {
-      duration: 5000,
-      icon: getNotificationIcon(notification.type)
-    });
+    setNotifications((prev) => [notification, ...prev]);
+    setUnreadCount((prev) => prev + 1);
   });
 
   useEffect(() => {
@@ -78,16 +71,13 @@ const Notifications = ({ driverId, userId }) => {
       const params = {
         page: pagination.page,
         limit: pagination.limit,
-        unreadOnly: showUnreadOnly
       };
-      
-      if (filter !== 'all') {
-        params.type = filter;
-      }
-      
+      if (showUnreadOnly) params.unreadOnly = true;   // only send when actually true
+      if (filter !== 'all') params.type = filter;
+
       const response = await driverApi.getNotifications(params);
       const { notifications: data, pagination: pag } = response.data.data;
-      
+
       setNotifications(data);
       setPagination(pag);
     } catch (error) {
@@ -110,8 +100,8 @@ const Notifications = ({ driverId, userId }) => {
   const handleMarkAsRead = async (id) => {
     try {
       await driverApi.markAsRead(id);
-      setNotifications(prev => 
-        prev.map(n => 
+      setNotifications(prev =>
+        prev.map(n =>
           n._id === id ? { ...n, read: true } : n
         )
       );
@@ -125,7 +115,7 @@ const Notifications = ({ driverId, userId }) => {
   const handleMarkAllAsRead = async () => {
     try {
       await driverApi.markAllAsRead();
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => ({ ...n, read: true }))
       );
       setUnreadCount(0);
@@ -217,12 +207,11 @@ const Notifications = ({ driverId, userId }) => {
           {filterTypes.map((type) => (
             <button
               key={type.value}
-              onClick={() => setFilter(type.value)}
-              className={`px-3 py-1 text-sm rounded-lg transition ${
-                filter === type.value
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              onClick={() => { setFilter(type.value); setPagination((p) => ({ ...p, page: 1 })); }}
+              className={`px-3 py-1 text-sm rounded-lg transition ${filter === type.value
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
             >
               {type.label}
             </button>
@@ -230,12 +219,11 @@ const Notifications = ({ driverId, userId }) => {
         </div>
         <div className="ml-auto">
           <button
-            onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-            className={`px-3 py-1 text-sm rounded-lg transition ${
-              showUnreadOnly
-                ? 'bg-yellow-100 text-yellow-700'
-                : 'bg-gray-100 text-gray-600'
-            }`}
+            onClick={() => { setShowUnreadOnly((v) => !v); setPagination((p) => ({ ...p, page: 1 })); }}
+            className={`px-3 py-1 text-sm rounded-lg transition ${showUnreadOnly
+              ? 'bg-yellow-100 text-yellow-700'
+              : 'bg-gray-100 text-gray-600'
+              }`}
           >
             {showUnreadOnly ? 'Showing Unread' : 'Show All'}
           </button>
@@ -253,13 +241,12 @@ const Notifications = ({ driverId, userId }) => {
             const Icon = getNotificationIcon(notification.type);
             const colorClass = getNotificationColor(notification.type);
             const isUnread = !notification.read;
-            
+
             return (
               <div
                 key={notification._id}
-                className={`p-4 hover:bg-gray-50 transition relative ${
-                  isUnread ? 'bg-blue-50' : ''
-                }`}
+                className={`p-4 hover:bg-gray-50 transition relative ${isUnread ? 'bg-blue-50' : ''
+                  }`}
               >
                 <div className="flex items-start gap-4">
                   <div className={`mt-1 ${colorClass}`}>
@@ -297,12 +284,12 @@ const Notifications = ({ driverId, userId }) => {
                       </div>
                     </div>
                     {notification.actionUrl && (
-                      <a
-                        href={notification.actionUrl}
+                      <button
+                        onClick={() => navigate((notification.actionUrl || '').replace(/^\/driver/, '') || '/')}
                         className="text-sm text-blue-600 hover:text-blue-700 font-medium mt-2 inline-block"
                       >
-                        View Details →
-                      </a>
+                        View details →
+                      </button>
                     )}
                     {notification.data && notification.data.tripId && (
                       <div className="mt-2 text-xs text-gray-500">

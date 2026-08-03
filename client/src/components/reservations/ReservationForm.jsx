@@ -69,7 +69,6 @@ const ReservationForm = ({ isFormOpen, isEdit = false, quoteId = null }) => {
     driverNote: '',
     tripNotes: '',
     vehicle: '',
-    driver: '',
     pricing: {
       items: [],
       subtotal: 0,
@@ -96,11 +95,10 @@ const ReservationForm = ({ isFormOpen, isEdit = false, quoteId = null }) => {
       setFetchingData(true);
       const VITE_URL = import.meta.env.VITE_URL;
 
-      const [contactsRes, vehiclesRes, usersRes, driversRes, profileRes, portalRes] = await Promise.all([
+      const [contactsRes, vehiclesRes, usersRes, profileRes, portalRes] = await Promise.all([
         axios.get(`${VITE_URL}/contact/list`, { withCredentials: true }),
         axios.get(`${VITE_URL}/vehicle/my-vehicles`, { withCredentials: true }),
         axios.get(`${VITE_URL}/member/list`, { withCredentials: true }),
-        axios.get(`${VITE_URL}/settings/driver/list`, { withCredentials: true }),
         axios.get(`${VITE_URL}/company-profile/preferences`, { withCredentials: true }),
         axios.get(`${VITE_URL}/company-profile/customer-portal/settings`, { withCredentials: true })
       ]);
@@ -108,7 +106,6 @@ const ReservationForm = ({ isFormOpen, isEdit = false, quoteId = null }) => {
       setContacts(contactsRes.data.data || []);
       setVehicles(vehiclesRes.data.vehicles || []);
       setUsers(usersRes.data.data || []);
-      setDrivers(driversRes.data.data || []);
 
       const preferences = profileRes.data.data || {};
       const portalSettings = portalRes.data.data || {};
@@ -330,7 +327,6 @@ const ReservationForm = ({ isFormOpen, isEdit = false, quoteId = null }) => {
       driverNote: formData.driverNote || '',
       tripNotes: formData.tripNotes || '',
       vehicle: formData.vehicle,
-      driver: formData.driver || null,
       internalComments: internalComments,
       pricing: {
         items: formData.pricing.items.map(item => ({
@@ -625,7 +621,7 @@ const ReservationForm = ({ isFormOpen, isEdit = false, quoteId = null }) => {
 
                 {/* VEHICLE & DRIVER */}
                 <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <SectionTitle>Vehicle & Driver</SectionTitle>
+                  <SectionTitle>Vehicle</SectionTitle>
 
                   <div>
                     <FieldLabel>Vehicle</FieldLabel>
@@ -639,23 +635,6 @@ const ReservationForm = ({ isFormOpen, isEdit = false, quoteId = null }) => {
                       {vehicles.map(v => (
                         <option key={v._id} value={v._id}>
                           {v.name} ({v.type}) - {v.passengerCapacity} seats
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="mt-4">
-                    <FieldLabel>Driver (Optional)</FieldLabel>
-                    <select
-                      name="driver"
-                      value={formData.driver}
-                      onChange={handleChange}
-                      className={`${inputCls} bg-white`}
-                    >
-                      <option value="">Select Driver</option>
-                      {drivers.map(d => (
-                        <option key={d._id} value={d._id}>
-                          {d.firstName} {d.lastName} {d.isAvailable ? '(Available)' : '(Unavailable)'}
                         </option>
                       ))}
                     </select>

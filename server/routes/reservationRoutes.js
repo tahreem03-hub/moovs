@@ -37,14 +37,14 @@ router.get('/:id', getReservationById);
 // Update
 router.put('/update/:id', updateReservation);
 
-// Status - Changed PUT to PATCH
-router.patch('/:id/status', updateReservationStatus);
+// Status
+router.post('/:id/status', updateReservationStatus);
 
-// Driver assignment - Changed PUT to PATCH
-router.patch('/:id/assign-driver', assignDriver);
+// Driver assignment
+router.post('/:id/assign-driver', assignDriver);
 
-// Farm out - Changed PUT to PATCH
-router.patch('/:id/farm-out', farmOutReservation);
+// Farm out
+router.post('/:id/farm-out', farmOutReservation);
 
 // Delete
 router.delete('/delete/:id', deleteReservation);

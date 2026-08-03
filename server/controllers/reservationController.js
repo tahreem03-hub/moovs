@@ -5,6 +5,7 @@ const Quote = require('../models/Quote');
 const Vehicle = require('../models/Vehicle');
 const Driver = require('../models/settings/Driver');
 const CompanyProfile = require('../models/settings/CompanyProfile');
+const { sendTripAssignedNotification } = require('../modules/driver/controllers/notificationController');
 
 // ============ CREATE RESERVATION ============
 const createReservation = async (req, res) => {
@@ -24,7 +25,6 @@ const createReservation = async (req, res) => {
       vehicle,
       pricing,
       internalComments,
-      driver,
       quoteId
     } = req.body;
 
@@ -112,9 +112,7 @@ const createReservation = async (req, res) => {
       vehicle,
       pricing: pricingData,
       internalComments: internalComments || [],
-      driver: driver || null,
-      status: driver ? 'dispatched' : 'confirmed',
-      confirmedAt: new Date(),
+      status: 'pending',
       quoteId: quoteId || null,
       createdBy: req.user._id,
       updatedBy: req.user._id
@@ -417,7 +415,7 @@ const assignDriver = async (req, res) => {
     const [driver, reservation] = await Promise.all([
       Driver.findOne({
         _id: driverId,
-        operatorId: req.user._id,
+        operator: req.user._id,
         isActive: true
       }),
       Reservation.findOne({
@@ -442,28 +440,40 @@ const assignDriver = async (req, res) => {
     }
 
     // Check driver availability (simplified)
-    const existingAssignment = await Reservation.findOne({
-      operatorId: req.user._id,
+    /*const existingAssignment = await Reservation.findOne({
+      operator: req.user._id,
       isDeleted: false,
       driver: driverId,
       status: { $in: ['confirmed', 'dispatched', 'started'] },
       _id: { $ne: id }
-    });
+    });*/
 
-    if (existingAssignment) {
+    /*if (existingAssignment) {
       return res.status(400).json({
         success: false,
         message: 'Driver is already assigned to another trip'
       });
+    }*/
+
+    if (reservation.status !== 'confirmed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Reservation must be confirmed before assigning a driver'
+      });
     }
 
     reservation.driver = driverId;
-    if (reservation.status === 'confirmed') {
-      reservation.status = 'dispatched';
-      reservation.dispatchedAt = new Date();
-    }
+    reservation.status = 'dispatched';
+    reservation.dispatchedAt = new Date();
     reservation.updatedBy = req.user._id;
     await reservation.save();
+
+    try {
+      const io = req.app.get('io');
+      await sendTripAssignedNotification(driver._id, reservation._id, io);
+    } catch (e) {
+      console.error('Assign notification error:', e);
+    }
 
     return res.status(200).json({
       success: true,

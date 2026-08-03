@@ -22,24 +22,25 @@ export const createReservation = (data) =>
   api.post('/reservation/create', data);
 
 export const updateReservation = (id, data) => 
-  api.put(`/reservation/update/${id}`, data);
+  api.post(`/reservation/update/${id}`, data);
 
 export const deleteReservation = (id) => 
   api.delete(`/reservation/delete/${id}`);
 
 // ============ STATUS ============
 export const updateReservationStatus = (id, status, reason = '') => 
-  api.put(`/reservation/${id}/status`, { status, cancellationReason: reason });
+  api.post(`/reservation/${id}/status`, { status, cancellationReason: reason });
 
 // ============ DRIVER ============
 export const assignDriver = (id, driverId) => 
-  api.put(`/reservation/${id}/assign-driver`, { driverId });
+  api.post(`/reservation/${id}/assign-driver`, { driverId });
 
 // ============ FARM OUT ============
 export const farmOutReservation = (id, farmedToId) => 
-  api.put(`/reservation/${id}/farm-out`, { farmedToId });
+  api.post(`/reservation/${id}/farm-out`, { farmedToId });
 
 // ============ CONVERT ============
+// no controller in backend
 export const convertQuoteToReservation = (quoteId) => 
   api.post(`/reservation/convert/${quoteId}`);
 
@@ -49,7 +50,7 @@ export const getReservationStats = () =>
 
 // ============ HELPERS ============
 export const getDrivers = () => 
-  api.get('/driver/list');
+  api.get('/settings/driver/list');
 
 export const getVehicles = () => 
   api.get('/vehicle/my-vehicles');

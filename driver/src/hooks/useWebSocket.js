@@ -1,116 +1,88 @@
 // driver-app/src/hooks/useWebSocket.js
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 
+const emojiFor = (type) =>
+  ({
+    new_trip: '🚗',
+    trip_update: '📝',
+    trip_cancelled: '❌',
+    message: '💬',
+    payment_received: '💰',
+    document_expiring: '⚠️',
+    document_approved: '✅',
+    document_rejected: '❌',
+    rating_received: '⭐',
+    system_alert: '🔔',
+  }[type] || '🔔');
+
+/**
+ * driverId here must be the USER _id (that's what the server rooms + notification
+ * recipients key on — see notificationService: room `driver-<recipient>` where
+ * recipient = driver.userId).
+ */
 export const useWebSocket = (driverId, userId, onNotification) => {
-  const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
-  const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 5;
+  const socketRef = useRef(null);
 
-  const connectWebSocket = useCallback(() => {
-    if (!driverId) return;
-
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
-    const ws = new WebSocket(`${wsUrl}?driverId=${driverId}&userId=${userId}&role=driver`);
-
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-      setIsConnected(true);
-      reconnectAttempts.current = 0;
-      toast.success('Connected to real-time updates');
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        setLastMessage(data);
-        
-        // Handle different message types
-        if (data.type === 'notification') {
-          // Show toast notification
-          toast[data.priority === 'urgent' ? 'error' : 'success'](data.message, {
-            duration: data.priority === 'urgent' ? 10000 : 5000,
-            icon: getNotificationIcon(data.type)
-          });
-          
-          // Call callback if provided
-          if (onNotification) {
-            onNotification(data);
-          }
-        } else if (data.type === 'connected') {
-          console.log('WebSocket connected:', data.message);
-        }
-      } catch (error) {
-        console.error('WebSocket message parse error:', error);
-      }
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      setIsConnected(false);
-      
-      // Attempt to reconnect
-      if (reconnectAttempts.current < maxReconnectAttempts) {
-        reconnectAttempts.current++;
-        setTimeout(() => {
-          console.log(`Attempting to reconnect... (${reconnectAttempts.current}/${maxReconnectAttempts})`);
-          connectWebSocket();
-        }, 3000 * reconnectAttempts.current);
-      } else {
-        toast.error('Connection lost. Please refresh the page.');
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    setSocket(ws);
-
-    return () => {
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-        ws.close();
-      }
-    };
-  }, [driverId, userId, onNotification]);
+  // Keep the latest callback in a ref so a new inline function each render
+  // does NOT tear down and recreate the socket.
+  const onNotificationRef = useRef(onNotification);
+  useEffect(() => {
+    onNotificationRef.current = onNotification;
+  }, [onNotification]);
 
   useEffect(() => {
-    const cleanup = connectWebSocket();
-    return cleanup;
-  }, [connectWebSocket]);
+    if (!driverId) return;
 
-  // Send message through socket
-  const sendMessage = useCallback((type, data) => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type, data }));
-    } else {
-      console.warn('WebSocket is not connected');
-    }
-  }, [socket]);
+    // Socket.IO uses an http(s) URL and upgrades to WS itself — not ws://
+    const url = import.meta.env.VITE_WS_URL || 'http://localhost:8000';
+    const socket = io(url, {
+      query: { driverId, userId, role: 'driver' },
+      withCredentials: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 3000,
+    });
+    socketRef.current = socket;
 
-  return {
-    socket,
-    isConnected,
-    sendMessage,
-    lastMessage
-  };
-};
+    socket.on('connect', () => setIsConnected(true));
+    socket.on('disconnect', () => setIsConnected(false));
+    socket.on('connect_error', (err) => {
+      console.error('Socket connect_error:', err.message);
+      setIsConnected(false);
+    });
 
-// Helper to get notification icon
-const getNotificationIcon = (type) => {
-  const icons = {
-    'new_trip': '🚗',
-    'trip_update': '📝',
-    'trip_cancelled': '❌',
-    'message': '💬',
-    'payment_received': '💰',
-    'document_expiring': '⚠️',
-    'document_approved': '✅',
-    'document_rejected': '❌',
-    'rating_received': '⭐',
-    'system_alert': '🔔'
-  };
-  return icons[type] || '🔔';
+    // Server's confirmation event
+    socket.on('connected', (data) => {
+      console.log('Realtime ready:', data?.message);
+    });
+
+    socket.on('notification', (payload) => {
+      // Server emits { id, ... }; the UI keys on _id, so normalize.
+      const notification = { ...payload, _id: payload._id || payload.id };
+      setLastMessage(notification);
+
+      toast[notification.priority === 'urgent' ? 'error' : 'success'](notification.message, {
+        duration: notification.priority === 'urgent' ? 10000 : 5000,
+        icon: emojiFor(notification.type),
+      });
+
+      onNotificationRef.current?.(notification);
+    });
+
+    return () => {
+      socket.off('notification');
+      socket.disconnect();
+      socketRef.current = null;
+    };
+    // NOTE: onNotification intentionally excluded — handled via ref above.
+  }, [driverId, userId]);
+
+  const sendMessage = useCallback((event, data) => {
+    if (socketRef.current?.connected) socketRef.current.emit(event, data);
+  }, []);
+
+  return { socket: socketRef.current, isConnected, sendMessage, lastMessage };
 };

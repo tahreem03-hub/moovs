@@ -69,7 +69,7 @@ const DriverDashboard = () => {
         driverApi.getStats()
       ]);
 
-      setDriver(profileRes.data.data);
+      setDriver(profileRes.data.user || profileRes.data.data);
       setStats(statsRes.data.data);
     } catch (error) {
       console.error('Load data error:', error);
@@ -222,6 +222,7 @@ const DriverDashboard = () => {
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           `}
         >
+          
           <nav className="h-full px-3 py-4 space-y-1 overflow-y-auto">
             <SidebarItem
               icon={Home}
@@ -274,7 +275,10 @@ const DriverDashboard = () => {
               <Route path="trips/:id" element={<TripDetails />} />
               <Route path="earnings" element={<Earnings />} />
               <Route path="profile" element={<Profile />} />
-              <Route path="notifications" element={<Notifications />} />
+              <Route
+                path="notifications"
+                element={<Notifications userId={driver?._id} driverId={driver?._id} />}
+              />
             </Routes>
           </div>
         </main>
