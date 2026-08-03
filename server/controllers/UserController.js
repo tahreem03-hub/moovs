@@ -27,7 +27,7 @@ const createUser = async (req, res, next) => {
             password,
             CompanyName,
             createdBy: null,
-            role: 'user',  // ✅ Default operator role
+            role: 'user',  // Default operator role
             isActive: true,
             subscriptionPlan: 'free',
             subscriptionStatus: 'trial'

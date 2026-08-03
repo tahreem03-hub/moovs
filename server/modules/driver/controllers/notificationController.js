@@ -56,7 +56,6 @@ const sendTripAssignedNotification = async (driverId, tripId, io) => {
       actionUrl: `/driver/trips/${trip._id}`
     });
 
-    console.log(`✅ Trip assignment notification sent to driver ${driver.firstName}`);
   } catch (error) {
     console.error('Error sending trip assignment notification:', error);
   }
@@ -129,7 +128,7 @@ const sendTripStatusNotification = async (driverId, tripId, status, io) => {
         console.log(`✅ Trip status notification sent to operator for trip ${trip.reservationNumber}`);
       }
 
-      // Notify customer (existing code)
+      // Notify customer (existing code - keep as is)
       if (trip.bookingContact) {
         await notificationService.createNotification({
           recipient: trip.bookingContact._id,

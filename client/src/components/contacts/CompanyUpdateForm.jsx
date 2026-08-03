@@ -69,7 +69,7 @@ const fetchCompany = async () => {
       description: company.description || '',
     });
     
-    // ✅ FIX: Handle relative photo URL
+    // FIX: Handle relative photo URL
     if (company.photo?.url) {
       // Prepend the base URL to the relative path
       const photoUrl = `${import.meta.env.VITE_URL}${company.photo.url}`;
@@ -175,7 +175,7 @@ const fetchCompany = async () => {
       );
       toast.success(response.data.message || 'Company updated successfully!');
       closeForm();
-      // ✅ Call the callback to refresh the list WITHOUT page reload
+      // Call the callback to refresh the list WITHOUT page reload
       if (onCompanyUpdated) {
         onCompanyUpdated();
       }
@@ -199,7 +199,7 @@ const fetchCompany = async () => {
       );
       toast.success(response.data.message || 'Company deleted successfully!');
       closeForm();
-      // ✅ Call the callback to refresh the list WITHOUT page reload
+      // Call the callback to refresh the list WITHOUT page reload
       if (onCompanyUpdated) {
         onCompanyUpdated();
       }

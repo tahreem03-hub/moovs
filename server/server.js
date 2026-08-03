@@ -1,7 +1,7 @@
 const http = require('http');
-const socketIo = require('socket.io');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
+const SocketHandler = require('./socketHandler');
 
 if (process.env.NODE_ENV !== "PRODUCTION") {
   require("dotenv").config({
@@ -25,92 +25,18 @@ dbConnect();
 // ============ CREATE HTTP SERVER ============
 const server = http.createServer(app);
 
-// ============ INITIALIZE SOCKET.IO ============
-const io = socketIo(server, {
-  cors: {
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-      const allowedOrigins = [
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'http://localhost:5175',
-      ];
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-  }
-});
+// ============ INITIALIZE SOCKET.IO USING SOCKET HANDLER ============
+const socketHandler = new SocketHandler(server);
 
-// ============ STORE CONNECTED DRIVERS ============
-const connectedDrivers = new Map();
+// Get io instance and stores from socket handler
+const io = socketHandler.getIO();
+const connectedDrivers = socketHandler.getConnectedDrivers();
+const connectedOperators = socketHandler.getConnectedOperators();
 
-// ============ AUTH MIDDLEWARE (verify token BEFORE connection) ============
-io.use((socket, next) => {
-  try {
-    const raw = socket.handshake.headers.cookie || '';
-    const { token } = cookie.parse(raw);
-    if (!token) return next(new Error('Unauthorized'));
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    socket.userId = decoded.id; // trust the verified token, not the query param
-    next();
-  } catch (err) {
-    next(new Error('Unauthorized'));
-  }
-});
-
-// ============ SOCKET.IO CONNECTION HANDLER ============
-io.on('connection', (socket) => {
-  const userId = socket.userId;              // from the verified token
-  const role = socket.handshake.query.role;  // role is fine to read from query
-
-  console.log('New client connected:', socket.id);
-
-  if (userId && role === 'driver') {
-    // Room is keyed on the verified user id — matches the notification service's
-    // `driver-<recipient>` where recipient = driver.userId
-    socket.join(`driver-${userId}`);
-
-    connectedDrivers.set(userId, {
-      socketId: socket.id,
-      connectedAt: new Date()
-    });
-    console.log(`Driver ${userId} connected. Total drivers: ${connectedDrivers.size}`);
-
-    socket.emit('connected', {
-      message: 'Connected to WebSocket server',
-      userId: userId,
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-    for (const [key, value] of connectedDrivers.entries()) {
-      if (value.socketId === socket.id) {
-        connectedDrivers.delete(key);
-        console.log(`Driver ${key} disconnected. Total drivers: ${connectedDrivers.size}`);
-        break;
-      }
-    }
-  });
-
-  // Handle errors
-  socket.on('error', (error) => {
-    console.error('Socket error:', error);
-  });
-});
-
-// ============ MAKE IO AND CONNECTED DRIVERS AVAILABLE TO APP ============
+// ============ MAKE IO AND CONNECTED USERS AVAILABLE TO APP ============
 app.set('io', io);
 app.set('connectedDrivers', connectedDrivers);
+app.set('connectedOperators', connectedOperators);
 
 // ============ START SERVER ============
 if (process.env.NODE_ENV !== "PRODUCTION") {
@@ -128,4 +54,4 @@ process.on("unhandledRejection", (err) => {
 });
 
 // Export for Vercel
-module.exports = { app, server, io };
+module.exports = { app, server, io, socketHandler };

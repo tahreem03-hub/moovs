@@ -12,7 +12,7 @@ const QuotesDashboard = () => {
 
   const currentStatus = searchParams.get("status") || "ALL";
 
-  // ✅ Fetch quotes based on status
+  // Fetch quotes based on status
   const fetchQuotes = async () => {
     try {
       setLoading(true);
@@ -51,13 +51,13 @@ const QuotesDashboard = () => {
     setSearchParams({ status });
   };
 
-  // ✅ Handle quote click to show details
+  // Handle quote click to show details
   const handleQuoteClick = (quote) => {
     setSelectedQuote(quote);
     navigate(`/quotes/${quote._id}`, { state: { quote } });
   };
 
-  // ✅ Format date
+  // Format date
   const formatDate = (date) => {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('en-US', {
@@ -67,7 +67,7 @@ const QuotesDashboard = () => {
     });
   };
 
-  // ✅ Format currency
+  // Format currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -75,7 +75,7 @@ const QuotesDashboard = () => {
     }).format(amount || 0);
   };
 
-  // ✅ Get status badge color
+  // Get status badge color
   const getStatusColor = (status) => {
     const colors = {
       draft: 'bg-gray-100 text-gray-600',

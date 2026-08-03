@@ -39,7 +39,7 @@ const QuoteStatusBadge = ({ status }) => {
   );
 };
 
-// ✅ Helper function to format phone
+// Helper function to format phone
 const formatPhone = (phone) => {
   if (!phone) return '-';
   if (typeof phone === 'object') {
@@ -280,7 +280,7 @@ const QuotesDetails = () => {
               <p className="text-xs text-gray-500 uppercase">Phone</p>
               <p className="font-medium text-gray-900 flex items-center gap-1">
                 <Phone className="w-3.5 h-3.5 text-gray-400" />
-                {/* ✅ FIXED: Format phone correctly */}
+                {/* FIXED: Format phone correctly */}
                 {formatPhone(quote.bookingContact?.phone)}
               </p>
             </div>

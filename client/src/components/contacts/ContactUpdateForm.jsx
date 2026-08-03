@@ -55,7 +55,7 @@ const ContactUpdateForm = ({ onContactUpdated }) => {
   useEffect(() => {
     if (!formOpen) return;
     axios
-      .get(`${import.meta.env.VITE_URL}/company/list`) // ✅ Singular
+      .get(`${import.meta.env.VITE_URL}/company/list`) // Singular
       .then((res) => setCompanies(res.data.data || []))
       .catch(() => setCompanies([]));
   }, [formOpen]);
@@ -71,7 +71,7 @@ const ContactUpdateForm = ({ onContactUpdated }) => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${import.meta.env.VITE_URL}/contact/${id}` // ✅ Singular
+        `${import.meta.env.VITE_URL}/contact/${id}` // Singular
       );
       const contact = response.data.data;
       
@@ -133,7 +133,7 @@ const ContactUpdateForm = ({ onContactUpdated }) => {
     try {
       setSubmitting(true);
       const response = await axios.put(
-        `${import.meta.env.VITE_URL}/contact/update/${id}`, // ✅ Singular
+        `${import.meta.env.VITE_URL}/contact/update/${id}`, // Singular
         payload
       );
       toast.success(response.data.message || 'Contact updated successfully!');
@@ -157,7 +157,7 @@ const ContactUpdateForm = ({ onContactUpdated }) => {
 
     try {
       const response = await axios.delete(
-        `${import.meta.env.VITE_URL}/contact/delete/${id}` // ✅ Singular
+        `${import.meta.env.VITE_URL}/contact/delete/${id}` // Singular
       );
       toast.success(response.data.message || 'Contact deleted successfully!');
       if (onContactUpdated) {
