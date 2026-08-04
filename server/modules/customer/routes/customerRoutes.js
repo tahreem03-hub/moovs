@@ -1,48 +1,161 @@
 // modules/customer/routes/customerRoutes.js
 const express = require('express');
 const router = express.Router();
+const { 
+    isAuthenticated, 
+    authorizeCustomer 
+} = require('../../../middleware/auth');
+
+// ============================================
+// CONTROLLERS
+// ============================================
 const {
-  customerRegister,
-  customerLogin,
-  getCustomerProfile,
-  requestQuote,
-  getCustomerQuotes,
-  createReservation,
-  getCustomerReservations,
-  cancelReservation,
-  getAvailableVehicles,
-  trackRide,
-  makePayment,
-  getCustomerInvoices
-} = require('../controllers/customerController');
-const { isAuthenticated, authorizeCustomer } = require('../../../middleware/auth');
+    register,
+    login,
+    upgradeGuest,
+    getProfile,
+    updateProfile,
+    changePassword
+} = require('../controllers/authController');
 
-// ============ PUBLIC ROUTES ============
-router.post('/auth/register', customerRegister);
-router.post('/auth/login', customerLogin);
-router.get('/vehicles', getAvailableVehicles);
-router.get('/track/:reservationNumber', trackRide);
+const {
+    getAddresses,
+    updateAddress,
+    deleteAddress,
+    getNotificationPreferences,
+    updateNotificationPreferences,
+    updateCompany,
+    updatePreferences,
+    getLinkedPassengers,
+    addLinkedPassenger,
+    removeLinkedPassenger
+} = require('../controllers/profileController');
 
-// ============ PROTECTED ROUTES (Customer only) ============
+const {
+    getHome,
+    getStats
+} = require('../controllers/dashboardController');
+
+const {
+    requestQuote,
+    getQuotes,
+    createReservation,
+    getReservations,
+    getReservationDetail,
+    cancelReservation,
+    rebookReservation,
+    rateAndTip
+} = require('../controllers/bookingController');
+
+const {
+    getActiveRide,
+    trackRide,
+    getDriverLocation
+} = require('../controllers/trackingController');
+
+const {
+    getPaymentMethods,
+    addPaymentMethod,
+    deletePaymentMethod,
+    setDefaultPaymentMethod,
+    getPaymentHistory,
+    payInvoice
+} = require('../controllers/paymentController');
+
+const {
+    getInvoices,
+    getInvoiceDetail,
+    downloadInvoicePDF
+} = require('../controllers/invoiceController');
+
+const {
+    getCashbackSummary,
+    getCashbackLedger
+} = require('../controllers/cashbackController');
+
+// ============================================
+// PUBLIC ROUTES (No Auth Required)
+// ============================================
+router.post('/auth/register', register);
+router.post('/auth/login', login);
+router.post('/auth/upgrade', upgradeGuest);
+
+// ============================================
+// PROTECTED ROUTES (Auth Required)
+// ============================================
 router.use(isAuthenticated);
 router.use(authorizeCustomer);
 
-// Profile
-router.get('/profile', getCustomerProfile);
+// ============ DASHBOARD ============
+router.get('/dashboard/home', getHome);
+router.get('/dashboard/stats', getStats);
 
-// Quotes
+// ============ PROFILE ============
+// Basic Profile
+router.get('/profile', getProfile);
+router.put('/profile', updateProfile);
+router.put('/profile/password', changePassword);
+
+// Addresses (using Contact homeAddress/workAddress fields)
+router.get('/profile/addresses', getAddresses);
+router.put('/profile/addresses', updateAddress);        // body: { type: 'home'|'work', address: '...' }
+router.delete('/profile/addresses/:type', deleteAddress); // type: 'home'|'work'
+
+// Company Info
+router.put('/profile/company', updateCompany);          // body: { company, position }
+
+// Preferences
+router.put('/profile/preferences', updatePreferences);  // body: { preferences: '...' }
+
+// Linked Passengers
+router.get('/profile/passengers', getLinkedPassengers);
+router.post('/profile/passengers', addLinkedPassenger); // body: { passengerId }
+router.delete('/profile/passengers/:passengerId', removeLinkedPassenger);
+
+// Notification Preferences
+router.get('/profile/notifications', getNotificationPreferences);
+router.put('/profile/notifications', updateNotificationPreferences);
+
+// ============ QUOTES ============
 router.post('/quotes', requestQuote);
-router.get('/quotes', getCustomerQuotes);
+router.get('/quotes', getQuotes);
 
-// Reservations
+// ============ RESERVATIONS ============
+router.get('/reservations', getReservations);
+router.get('/reservations/:id', getReservationDetail);
 router.post('/reservations', createReservation);
-router.get('/reservations', getCustomerReservations);
-router.patch('/reservations/:id/cancel', cancelReservation);
+router.post('/reservations/:id/cancel', cancelReservation);
+router.post('/reservations/:id/rebook', rebookReservation);
+router.post('/reservations/:id/rate', rateAndTip);
 
-// Payments
-router.post('/reservations/:id/pay', makePayment);
+// ============ TRACKING ============
+router.get('/tracking/active', getActiveRide);
+router.get('/tracking/:id', trackRide);
+router.get('/tracking/driver/:reservationId/location', getDriverLocation);
 
-// Invoices
-router.get('/invoices', getCustomerInvoices);
+// ============ PAYMENTS ============
+// Payment Methods (stored in Contact.paymentMethods array)
+router.get('/payment-methods', getPaymentMethods);
+router.post('/payment-methods', addPaymentMethod);
+router.delete('/payment-methods/:id', deletePaymentMethod);
+router.put('/payment-methods/:id/default', setDefaultPaymentMethod);
+
+// Payment History
+router.get('/payments', getPaymentHistory);
+
+// Pay Invoice
+router.post('/invoices/:id/pay', payInvoice);
+
+// ============ INVOICES ============
+router.get('/invoices', getInvoices);
+router.get('/invoices/:id', getInvoiceDetail);
+router.get('/invoices/:id/download', downloadInvoicePDF);
+
+// ============ CASHBACK ============
+router.get('/cashback', getCashbackSummary);
+router.get('/cashback/ledger', getCashbackLedger);
+
+// ============ GUEST BOOKING (Optional - Allow guest to book without auth) ============
+// router.post('/guest/book', guestBooking);
 
 module.exports = router;

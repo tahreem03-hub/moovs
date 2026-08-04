@@ -106,6 +106,64 @@ const contactSchema = new Schema(
       enum: ['individual', 'corporate'],
       default: 'individual',
     },
+
+
+        // ============================================
+    // NEW FIELDS FOR CUSTOMER AUTH
+    // ============================================
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true
+    },
+    isRegistered: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    registrationSource: {
+      type: String,
+      enum: ['operator_created', 'guest_booking', 'self_register'],
+      default: 'operator_created'
+    },
+
+    // ============================================
+    // NEW FIELDS FOR CASHBACK
+    // ============================================
+    cashbackBalanceCents: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+
+    // ============================================
+    // NEW FIELDS FOR NOTIFICATIONS
+    // ============================================
+    notificationPreferences: {
+      email: {
+        bookingConfirmed: { type: Boolean, default: true },
+        driverEnRoute: { type: Boolean, default: true },
+        receipt: { type: Boolean, default: true },
+        reviewRequest: { type: Boolean, default: true },
+        promos: { type: Boolean, default: false }
+      },
+      sms: {
+        bookingConfirmed: { type: Boolean, default: true },
+        driverEnRoute: { type: Boolean, default: true },
+        receipt: { type: Boolean, default: false },
+        promos: { type: Boolean, default: false }
+      },
+      push: {
+        bookingConfirmed: { type: Boolean, default: true },
+        driverEnRoute: { type: Boolean, default: true },
+        receipt: { type: Boolean, default: false },
+        promos: { type: Boolean, default: false }
+      }
+    },
+
+
+
     isActive: { type: Boolean, default: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },

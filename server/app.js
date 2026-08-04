@@ -42,7 +42,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ============ IMPORT MODULES ============
 const { adminRoutes } = require('./modules/admin');
 const driverModule = require('./modules/driver');
-const { customerRoutes } = require('./modules/customer');
+const customerModule = require('./modules/customer');
 
 
 // Import modular admin routes
@@ -103,7 +103,7 @@ app.use('/admin/subscriptions', subscriptionRoutes);
 app.use('/driver', driverModule);
 
 // Customer routes
-app.use('/customer', customerRoutes);
+app.use('/customer', customerModule.routes);
 
 
 app.use(errorHandler);
