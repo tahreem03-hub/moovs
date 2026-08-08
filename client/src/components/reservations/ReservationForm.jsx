@@ -343,27 +343,34 @@ const ReservationForm = ({ isFormOpen, isEdit = false, quoteId = null }) => {
       }
     };
 
-    try {
-      const VITE_URL = import.meta.env.VITE_URL;
-      let response;
+     try {
+        const VITE_URL = import.meta.env.VITE_URL;
+        let response;
 
-      if (isEditing) {
-        response = await axios.patch(`${VITE_URL}/reservation/update/${editingId}`, payload, {
-          withCredentials: true
-        });
-        toast.success('Reservation updated successfully');
-      } else {
-        response = await axios.post(`${VITE_URL}/reservation/create`, payload, {
-          withCredentials: true
-        });
-        toast.success('Reservation created successfully');
-      }
+        if (isEditing) {
+            response = await axios.patch(`${VITE_URL}/reservation/update/${editingId}`, payload, {
+                withCredentials: true
+            });
+            toast.success('Reservation updated successfully');
+        } else {
+            response = await axios.post(`${VITE_URL}/reservation/create`, payload, {
+                withCredentials: true
+            });
+            
+            // Check if invoice was created
+            const result = response.data;
+            if (result.data?.invoice) {
+                toast.success(`Reservation created with invoice ${result.data.invoice.invoiceNumber}`);
+            } else {
+                toast.success('Reservation created successfully');
+            }
+        }
 
-      navigate('/reservations?status=ALL');
+        navigate('/reservations?status=ALL');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to save reservation');
+        toast.error(error.response?.data?.message || 'Failed to save reservation');
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 

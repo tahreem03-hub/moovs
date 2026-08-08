@@ -171,13 +171,43 @@ const reservationSchema = new Schema(
             ref: 'Driver',
             default: null
         },
-
-        // Status (Reservation specific statuses)
+        // Main status (6 states only)
         status: {
             type: String,
             enum: ['pending', 'confirmed', 'dispatched', 'started', 'completed', 'cancelled', 'billed'],
             default: 'pending',
             index: true,
+        },
+
+        // Driver tracking status (new field - for detailed tracking)
+        driverStatus: {
+            type: String,
+            enum: ['en_route', 'arrived', 'on_board'],
+            default: null
+        },
+
+        // Status history for audit (new field)
+        statusHistory: [{
+            status: { type: String, required: true },
+            driverStatus: { type: String },
+            changedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+            changedAt: { type: Date, default: Date.now },
+            note: { type: String },
+            location: {
+                lat: Number,
+                lng: Number
+            }
+        }],
+
+        // Timestamps for each status (new field)
+        timestamps: {
+            pendingAt: { type: Date, default: Date.now },
+            confirmedAt: { type: Date },
+            dispatchedAt: { type: Date },
+            startedAt: { type: Date },
+            completedAt: { type: Date },
+            cancelledAt: { type: Date },
+            billedAt: { type: Date }
         },
 
         // Farm Out
@@ -253,10 +283,11 @@ const reservationSchema = new Schema(
             }
         }],
         paymentLink: {
-            
-            token: { type: String, //unique: true,
+
+            token: {
+                type: String, //unique: true,
                 sparse: true, // ✅ This allows multiple null values
-             },
+            },
             expiresAt: { type: Date },
             status: { type: String, enum: ['active', 'used', 'expired'], default: 'active' }
         },

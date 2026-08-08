@@ -83,114 +83,37 @@ const companyProfileSchema = new mongoose.Schema({
                 amount: { type: Number, default: 0 },
                 order: { type: Number, default: 0 }
             }],
-            pricePerStop: {
-                type: Number,
-                default: 0
-            },
-            enableAmountDueOnDriverApp: {
-                type: Boolean,
-                default: false
-            },
-            enableLuggageOptions: {
-                type: Boolean,
-                default: false
-            },
-            showTripStartEndTimes: {
-                type: Boolean,
-                default: false
-            }
+            pricePerStop: { type: Number, default: 0 },
+            enableAmountDueOnDriverApp: { type: Boolean, default: false },
+            enableLuggageOptions: { type: Boolean, default: false },
+            showTripStartEndTimes: { type: Boolean, default: false }
         },
-        timeFormat: {
-            type: String,
-            enum: ['12h', '24h'],
-            default: '12h'
-        },
-
-        dateFormat: {
-            type: String,
-            enum: ['MM/DD/YYYY', 'DD/MM/YYYY'],
-            default: 'MM/DD/YYYY'
-        },
-
-        // ============ ORDER TYPES ============
+        timeFormat: { type: String, enum: ['12h', '24h'], default: '12h' },
+        dateFormat: { type: String, enum: ['MM/DD/YYYY', 'DD/MM/YYYY'], default: 'MM/DD/YYYY' },
         orderTypes: {
-            requirement: {
-                type: String,
-                enum: ['required', 'optional', 'disabled'],
-                default: 'optional'
-            },
-            selected: {
-                type: [String],
-                default: [
-                    // Airport
-                    'Airport',
-                    'Airport Drop Off',
-                    'Airport Pick Up',
-                    // Other
-                    'Anniversary',
-                    'Bar/Bat Mitzvah',
-                    'Birthday',
-                    'Family Reunion',
-                    'Funeral',
-                    'Kids Birthday',
-                    'Quinceanera',
-                    'Sweet 16',
-                    // Corporate
-                    'Business Trip',
-                    'Corporate',
-                    'Corporate Event',
-                    'Personal Trip',
-                    // Leisure
-                    'Holiday',
-                    'Medical',
-                    'Other',
-                    'Point-to-Point',
-                    'Rental',
-                    'Seaport',
-                    'Special Occasion',
-                    'Train Station',
-                    // School
-                    'Field Trip',
-                    'Graduation',
-                    'Prom/Homecoming',
-                    'School',
-                    'School Fundraiser',
-                    // Sporting Event
-                    'Bar',
-                    'Baseball',
-                    'Basketball',
-                    'Brew Tour',
-                    'Concert',
-                    'Day Tour',
-                    'Football',
-                    'Golf',
-                    'Group Tour',
-                    'Hockey',
-                    'Leisure',
-                    'Night Out',
-                    'Sporting Event',
-                    'Wine Tour',
-                    // Wedding
-                    'Bachelor/Bachelorette',
-                    'Bridal Party',
-                    'Bride/Groom',
-                    'Wedding'
-                ]
-            }
+            requirement: { type: String, enum: ['required', 'optional', 'disabled'], default: 'optional' },
+            selected: { type: [String], default: [
+                'Airport', 'Airport Drop Off', 'Airport Pick Up',
+                'Anniversary', 'Bar/Bat Mitzvah', 'Birthday', 'Family Reunion', 'Funeral',
+                'Kids Birthday', 'Quinceanera', 'Sweet 16',
+                'Business Trip', 'Corporate', 'Corporate Event', 'Personal Trip',
+                'Holiday', 'Medical', 'Other', 'Point-to-Point', 'Rental', 'Seaport',
+                'Special Occasion', 'Train Station',
+                'Field Trip', 'Graduation', 'Prom/Homecoming', 'School', 'School Fundraiser',
+                'Bar', 'Baseball', 'Basketball', 'Brew Tour', 'Concert', 'Day Tour',
+                'Football', 'Golf', 'Group Tour', 'Hockey', 'Leisure', 'Night Out',
+                'Sporting Event', 'Wine Tour',
+                'Bachelor/Bachelorette', 'Bridal Party', 'Bride/Groom', 'Wedding'
+            ]}
         }
     },
 
-
-    // Customer Portal Section
+    // ============ CUSTOMER PORTAL ============
     customerPortal: {
         // ============ PAYMENTS TAB ============
         payments: {
             creditCardEnabled: { type: Boolean, default: true },
-            paymentPreference: {
-                type: String,
-                enum: ['no_charge', 'deposit', 'full_charge'],
-                default: 'full_charge'
-            },
+            paymentPreference: { type: String, enum: ['no_charge', 'deposit', 'full_charge'], default: 'full_charge' },
             depositAmount: { type: Number, default: 0 },
             depositType: { type: String, enum: ['percentage', 'flat'], default: 'flat' }
         },
@@ -245,38 +168,20 @@ const companyProfileSchema = new mongoose.Schema({
                 enabled: { type: Boolean, default: false },
                 defaultVehicleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' }
             },
-
             // Vehicle Order (Coming Soon)
-            vehicleOrder: {
-                type: String,
-                enum: ['price', 'capacity', 'name', 'manual'],
-                default: 'price'
-            },
-            vehicleOrderDirection: {
-                type: String,
-                enum: ['ascending', 'descending'],
-                default: 'ascending'
-            }
+            vehicleOrder: { type: String, enum: ['price', 'capacity', 'name', 'manual'], default: 'price' },
+            vehicleOrderDirection: { type: String, enum: ['ascending', 'descending'], default: 'ascending' }
         },
 
         // ============ BRANDING TAB ============
         branding: {
-            logo: {
-                url: { type: String, default: '' },
-                filename: { type: String, default: '' }
-            },
+            logo: { url: { type: String, default: '' }, filename: { type: String, default: '' } },
             primaryColor: { type: String, default: '#2563EB' },
             secondaryColor: { type: String, default: '#1E293B' },
             accentColor: { type: String, default: '#F59E0B' },
             fontFamily: { type: String, default: 'Inter' },
-            buttonStyle: {
-                type: String,
-                enum: ['rounded', 'pill', 'square'],
-                default: 'rounded'
-            }
+            buttonStyle: { type: String, enum: ['rounded', 'pill', 'square'], default: 'rounded' }
         },
-
-        // ============ PROMO CODES TAB ============
         promoCode: {
             enabled: { type: Boolean, default: false },
             autoApply: { type: Boolean, default: false },
@@ -291,10 +196,19 @@ const companyProfileSchema = new mongoose.Schema({
                 isActive: { type: Boolean, default: true }
             }]
         }
-    }
-}, { timestamps: true });
+    },
 
+    // ADD CASHBACK SETTINGS
+    cashback: {
+        enabled: { type: Boolean, default: true },
+        rate: { type: Number, default: 5, min: 0, max: 100 }
+    }
+
+}, { timestamps: true });
 // Get or create profile for a specific operator
+// ============================================
+// STATIC METHODS
+// ============================================
 companyProfileSchema.statics.getCompanyProfile = async function(operatorId) {
     if (!operatorId) {
         throw new Error('operatorId is required to get company profile');
@@ -307,13 +221,14 @@ companyProfileSchema.statics.getCompanyProfile = async function(operatorId) {
             operatorId: operatorId,
             name: 'My Transportation Company',
             email: 'info@mycompany.com',
-            phone: '+1 234 567 8900'
+            phone: '+1 234 567 8900',
+            cashback: { enabled: true, rate: 5 }
         });
     }
     return profile;
 };
 
-// ✅ FIXED: Get profile by operator ID
+// Get profile by operator ID
 companyProfileSchema.statics.getProfileByOperator = async function(operatorId) {
     return await this.findOne({ operatorId });
 };

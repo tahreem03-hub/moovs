@@ -5,8 +5,6 @@ const cors = require('cors')
 const app = express();
 const errorHandler = require('./middleware/error')
 
-
-
 // CORS HERE - BEFORE ANY ROUTES
 app.use(cors({
   origin: function (origin, callback) {

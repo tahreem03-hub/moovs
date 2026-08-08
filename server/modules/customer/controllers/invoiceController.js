@@ -1,14 +1,12 @@
 // modules/customer/controllers/invoiceController.js
 const Contact = require('../../../models/Contact');
 const Invoice = require('../../../models/Invoice');
-
 // ============================================
 // 1. GET INVOICES
 // ============================================
 const getInvoices = async (req, res) => {
     try {
         const { 
-            status, 
             from, 
             to, 
             limit = 20, 
@@ -17,7 +15,6 @@ const getInvoices = async (req, res) => {
 
         const contact = await Contact.findOne({ 
             userId: req.user._id,
-            isDeleted: false 
         });
 
         if (!contact) {
@@ -29,11 +26,10 @@ const getInvoices = async (req, res) => {
 
         const skip = (page - 1) * limit;
         const filter = {
-            contactId: contact._id,
-            isDeleted: false
+            customerId: contact._id,  
+            isDeleted: false       
         };
-
-        if (status) filter.status = status;
+        
         if (from) filter.createdAt = { $gte: new Date(from) };
         if (to) filter.createdAt = { ...filter.createdAt, $lte: new Date(to) };
 
@@ -73,7 +69,6 @@ const getInvoiceDetail = async (req, res) => {
 
         const contact = await Contact.findOne({ 
             userId: req.user._id,
-            isDeleted: false 
         });
 
         if (!contact) {
@@ -85,8 +80,8 @@ const getInvoiceDetail = async (req, res) => {
 
         const invoice = await Invoice.findOne({
             _id: id,
-            contactId: contact._id,
-            isDeleted: false
+            customerId: contact._id,  // ✅ Changed from contactId to customerId
+            isDeleted: false           // ✅ Add this to filter out deleted invoices
         })
         .populate('reservationId', 'reservationNumber pickupDateTime tripType stops');
 
@@ -119,7 +114,6 @@ const downloadInvoicePDF = async (req, res) => {
 
         const contact = await Contact.findOne({ 
             userId: req.user._id,
-            isDeleted: false 
         });
 
         if (!contact) {
@@ -131,8 +125,8 @@ const downloadInvoicePDF = async (req, res) => {
 
         const invoice = await Invoice.findOne({
             _id: id,
-            contactId: contact._id,
-            isDeleted: false
+            customerId: contact._id,  // ✅ Changed from contactId to customerId
+            isDeleted: false           // ✅ Add this to filter out deleted invoices
         });
 
         if (!invoice) {

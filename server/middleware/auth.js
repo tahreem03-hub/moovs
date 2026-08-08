@@ -5,25 +5,8 @@ const catchAsyncError = require('./catchAsyncError');
 const ErrorHandler = require("../utils/ErrorHandler");
 
 const isAuthenticated = catchAsyncError(async (req, res, next) => {
-   try {
-        let token = null;
-        
-        // 1. Check cookies first
-        if (req.cookies && req.cookies.token) {
-            token = req.cookies.token;
-            console.log('✅ Token found in cookies');
-        }
-        
-        // 2. If no token in cookies, check Authorization header
-        if (!token) {
-            const authHeader = req.headers.authorization;
-            if (authHeader && authHeader.startsWith('Bearer ')) {
-                token = authHeader.split(' ')[1];
-                console.log('✅ Token found in Authorization header');
-            }
-        }
-        
-        // 3. If still no token, return error
+    try {
+        const { token } = req.cookies;
         if (!token) {
             return next(new ErrorHandler("Please login first", 401));
         }

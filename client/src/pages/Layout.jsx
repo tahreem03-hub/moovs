@@ -12,7 +12,6 @@ const Layout = () => {
   const [notificationCount, setNotificationCount] = useState(0);
 
   const handleNewNotification = (notification) => {
-    console.log('New operator notification:', notification);
     setNotificationCount(prev => prev + 1);
     
     // Optional: Show in-app notification banner

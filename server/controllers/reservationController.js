@@ -5,7 +5,11 @@ const Quote = require('../models/Quote');
 const Vehicle = require('../models/Vehicle');
 const Driver = require('../models/settings/Driver');
 const CompanyProfile = require('../models/settings/CompanyProfile');
+const User = require('../models/User')
+const Invoice = require('../models/Invoice');
+const Contact = require('../models/Contact');
 const { sendTripAssignedNotification, sendTripStatusNotification } = require('../modules/driver/controllers/notificationController');
+
 
 // ============ CREATE RESERVATION ============
 const createReservation = async (req, res) => {
@@ -23,111 +27,147 @@ const createReservation = async (req, res) => {
       driverNote,
       tripNotes,
       vehicle,
+      driver,
       pricing,
-      internalComments,
-      quoteId
+      internalComments
     } = req.body;
 
     // Validate required fields
-    if (!vehicle) {
+    if (!bookingContact) {
       return res.status(400).json({
         success: false,
-        message: 'Vehicle is required'
-      });
-    }
-    if (!pickupDateTime) {
-      return res.status(400).json({
-        success: false,
-        message: 'Pickup date/time is required'
-      });
-    }
-    if (!stops || stops.length < 2) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least pickup and dropoff stops are required'
+        message: 'Booking contact is required'
       });
     }
 
-    // Validate stops have pickup and dropoff
-    const hasPickup = stops.some(s => s.type === 'pickup');
-    const hasDropoff = stops.some(s => s.type === 'dropoff');
-    if (!hasPickup || !hasDropoff) {
-      return res.status(400).json({
+    // Get customer details
+    const customer = await Contact.findById(bookingContact);
+    if (!customer) {
+      return res.status(404).json({
         success: false,
-        message: 'Must have both pickup and dropoff stops'
+        message: 'Customer not found'
       });
     }
 
-    // If converting from quote, update quote status
-    if (quoteId) {
-      const quote = await Quote.findOne({
-        _id: quoteId,
-        operatorId: req.user._id,
-        isDeleted: false
-      });
-      if (!quote) {
-        return res.status(404).json({
-          success: false,
-          message: 'Quote not found'
-        });
-      }
-      quote.status = 'converted';
-      await quote.save();
-    }
+    // Generate reservation number
+    const reservationNumber = await generateReservationNumber();
 
-    // Get pricing preferences if no pricing provided
-    let pricingData = pricing;
-    if (!pricingData || !pricingData.items || pricingData.items.length === 0) {
-      const profile = await CompanyProfile.findOne({ operatorId: req.user._id });
-      const pricingItems = profile?.preferences?.pricingLayout?.selectedItems || [];
-      pricingData = {
-        items: pricingItems.map(item => ({
-          label: item.name,
-          rateType: item.type === 'percentage' ? 'flat' : 'flat',
-          amount: item.amount || 0,
-          hours: 0,
-          isAutoCalculated: false,
-          taxable: false
-        })),
-        taxRate: 0,
-        discount: 0,
-        gratuity: 0,
-        currency: 'USD'
-      };
-    }
-
-    const reservation = await Reservation.create({
+    // Create reservation
+    const reservation = new Reservation({
       operatorId: req.user._id,
-      bookingContact: bookingContact || null,
-      orderType: orderType || 'retail',
-      assignedMember: assignedMember || null,
-      tripType: tripType || 'hourly',
-      passenger: passenger || null,
-      pickupDateTime,
-      dropoffDateTime: dropoffDateTime || null,
-      stops,
-      passengerCount: passengerCount || null,
-      driverNote: driverNote || '',
-      tripNotes: tripNotes || '',
-      vehicle,
-      pricing: pricingData,
+      bookingContact: bookingContact,
+      orderType: orderType,
+      assignedMember: assignedMember,
+      tripType: tripType,
+      passenger: passenger,
+      pickupDateTime: pickupDateTime,
+      dropoffDateTime: dropoffDateTime,
+      stops: stops,
+      passengerCount: passengerCount,
+      driverNote: driverNote,
+      tripNotes: tripNotes,
+      vehicle: vehicle,
+      driver: driver,
+      pricing: pricing,
       internalComments: internalComments || [],
+      reservationNumber: reservationNumber,
       status: 'pending',
-      quoteId: quoteId || null,
       createdBy: req.user._id,
-      updatedBy: req.user._id
+      isClosed: false
     });
+
+    await reservation.save();
+
+    let invoice = null;
+        try {
+            invoice = await createInvoiceFromReservation(reservation, req.user._id);
+            
+        } catch (error) {
+            console.error('Failed to generate invoice:', error);
+            // Don't fail the reservation
+        }
+
+    // Populate the reservation with customer details for response
+    await reservation.populate('bookingContact', 'firstName lastName email phone');
 
     return res.status(201).json({
       success: true,
       message: 'Reservation created successfully',
-      data: reservation
+      data: {
+        reservation: reservation,
+        invoice: invoice 
+      }
     });
+
   } catch (error) {
     console.error('Create reservation error:', error);
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to create reservation'
+    });
+  }
+};
+
+// ============ UPDATE RESERVATION (with invoice update) ============
+const updateReservation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const reservation = await Reservation.findOne({
+      _id: id,
+      operatorId: req.user._id,
+      isDeleted: false
+    });
+
+    if (!reservation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reservation not found'
+      });
+    }
+
+    // Update reservation
+    Object.assign(reservation, updateData);
+    reservation.updatedAt = new Date();
+    await reservation.save();
+
+    // ✅ Check if pricing changed and update invoice
+    let updatedInvoice = null;
+    if (updateData.pricing) {
+      // Find existing invoice
+      const existingInvoice = await Invoice.findOne({
+        reservationId: reservation._id,
+        isDeleted: false
+      });
+
+      if (existingInvoice) {
+        // Regenerate invoice with updated pricing
+        // Mark old invoice as deleted
+        existingInvoice.isDeleted = true;
+        await existingInvoice.save();
+
+        // Create new invoice
+        updatedInvoice = await createInvoiceFromReservation(reservation, req.user._id);
+      }
+    }
+
+    await reservation.populate('bookingContact', 'firstName lastName email phone');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Reservation updated successfully',
+      data: {
+        reservation: reservation,
+        invoice: updatedInvoice // ✅ Include updated invoice if regenerated
+      }
+    });
+
+  } catch (error) {
+    console.error('Update reservation error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update reservation'
     });
   }
 };
@@ -245,80 +285,6 @@ const getReservationById = async (req, res) => {
     });
   }
 };
-
-// ============ UPDATE RESERVATION ============
-const updateReservation = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid reservation ID'
-      });
-    }
-
-    const reservation = await Reservation.findOne({
-      _id: id,
-      operatorId: req.user._id,
-      isDeleted: false
-    });
-
-    if (!reservation) {
-      return res.status(404).json({
-        success: false,
-        message: 'Reservation not found'
-      });
-    }
-
-    const updates = req.body;
-    const allowedFields = [
-      'bookingContact', 'orderType', 'assignedMember', 'tripType', 'passenger',
-      'pickupDateTime', 'dropoffDateTime', 'stops', 'passengerCount',
-      'driverNote', 'tripNotes', 'vehicle', 'pricing', 'internalComments',
-      'driver', 'status'
-    ];
-
-    allowedFields.forEach(field => {
-      if (updates[field] !== undefined) {
-        reservation[field] = updates[field];
-      }
-    });
-
-    // Update status timestamps if status changed
-    if (updates.status && updates.status !== reservation.status) {
-      const statusTimestamps = {
-        confirmed: 'confirmedAt',
-        dispatched: 'dispatchedAt',
-        started: 'startedAt',
-        completed: 'completedAt',
-        cancelled: 'cancelledAt'
-      };
-      if (statusTimestamps[updates.status]) {
-        reservation[statusTimestamps[updates.status]] = new Date();
-      }
-      if (updates.status === 'cancelled' && updates.cancellationReason) {
-        reservation.cancellationReason = updates.cancellationReason;
-      }
-    }
-
-    reservation.updatedBy = req.user._id;
-    await reservation.save();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Reservation updated successfully',
-      data: reservation
-    });
-  } catch (error) {
-    console.error('Update reservation error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update reservation'
-    });
-  }
-};
-
 // ============ UPDATE RESERVATION STATUS ============
 const updateReservationStatus = async (req, res) => {
   try {
@@ -400,7 +366,7 @@ const updateReservationStatus = async (req, res) => {
     // Send notification based on status change
     try {
       const io = req.app.get('io');
-      
+
       // For cancellation, notify driver
       if (status === 'cancelled' && reservation.driver) {
         await sendTripStatusNotification(
@@ -410,7 +376,7 @@ const updateReservationStatus = async (req, res) => {
           io
         );
       }
-      
+
       // For started and completed, notify operator and customer
       if (status === 'started' || status === 'completed') {
         // If driver exists, send notification
@@ -423,7 +389,7 @@ const updateReservationStatus = async (req, res) => {
           );
         }
       }
-      
+
       // For dispatched, notify driver (if not already handled by assignDriver)
       if (status === 'dispatched' && reservation.driver) {
         await sendTripStatusNotification(
@@ -433,7 +399,7 @@ const updateReservationStatus = async (req, res) => {
           io
         );
       }
-      
+
     } catch (notificationError) {
       console.error('Failed to send status notification:', notificationError);
       // Don't fail the request if notification fails
@@ -778,6 +744,125 @@ const convertQuoteToReservation = async (req, res) => {
       message: 'Failed to convert quote to reservation'
     });
   }
+};
+
+
+
+//=====================HELPERS=========================
+
+// ============ HELPER: Generate Reservation Number ============
+const generateReservationNumber = async () => {
+  const year = new Date().getFullYear();
+  const count = await Reservation.countDocuments({
+    createdAt: {
+      $gte: new Date(year, 0, 1),
+      $lte: new Date(year, 11, 31)
+    }
+  });
+  const sequence = String(count + 1).padStart(4, '0');
+  return `RES-${year}-${sequence}`;
+};
+
+// ============ HELPER: Create Invoice from Reservation ============
+const createInvoiceFromReservation = async (reservation, createdBy) => {
+    try {
+        // Check if invoice already exists
+        const existingInvoice = await Invoice.findOne({
+            reservationId: reservation._id,
+            isDeleted: false
+        });
+
+        if (existingInvoice) {
+            return existingInvoice;
+        }
+
+        // Get customer details
+        let customerName = 'Unknown Customer';
+        let customerEmail = null;
+        let customerPhone = null;
+        let customerId = null;
+
+        if (reservation.bookingContact) {
+            const customer = await Contact.findById(reservation.bookingContact)
+                .select('firstName lastName email phone');
+            
+            if (customer) {
+                customerId = customer._id;
+                const firstName = customer.firstName || '';
+                const lastName = customer.lastName || '';
+                customerName = `${firstName} ${lastName}`.trim() || 'Unknown Customer';
+                customerEmail = customer.email || null;
+                customerPhone = customer.phone?.number || customer.phone || null;
+            }
+        }
+
+        // Build invoice items
+        let items = [];
+        if (reservation.pricing?.items && reservation.pricing.items.length > 0) {
+            items = reservation.pricing.items.map(item => ({
+                description: item.label || item.name || 'Service',
+                quantity: 1,
+                rate: item.amount || 0,
+                amount: item.amount || 0
+            }));
+        } else {
+            items.push({
+                description: 'Transportation Service',
+                quantity: 1,
+                rate: reservation.pricing?.total || 0,
+                amount: reservation.pricing?.total || 0
+            });
+        }
+
+        const subtotal = reservation.pricing?.subtotal || reservation.pricing?.total || 0;
+        const taxRate = reservation.pricing?.taxRate || 0;
+        const taxAmount = (subtotal * taxRate) / 100;
+        const discount = reservation.pricing?.discount || 0;
+        const total = subtotal + taxAmount - discount;
+
+        const invoiceNumber = await generateInvoiceNumber(reservation.operatorId || createdBy);
+
+        const invoice = await Invoice.create({
+            operatorId: reservation.operatorId || createdBy,
+            reservationId: reservation._id,
+            reservationNumber: reservation.reservationNumber,
+            customerId: customerId || reservation.bookingContact,
+            customerName: customerName,
+            customerEmail: customerEmail,
+            customerPhone: customerPhone,
+            items: items,
+            subtotal: Math.round(subtotal * 100) / 100,
+            taxRate: taxRate,
+            taxAmount: Math.round(taxAmount * 100) / 100,
+            discount: Math.round(discount * 100) / 100,
+            total: Math.round(Math.max(0, total) * 100) / 100,
+            currency: 'USD',
+            status: 'draft',
+            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            notes: `Invoice for reservation ${reservation.reservationNumber}`,
+            createdBy: createdBy,
+            invoiceNumber: invoiceNumber
+        });
+
+        return invoice;
+    } catch (error) {
+        console.error('Create invoice from reservation error:', error);
+        throw error;
+    }
+};
+
+// ============ HELPER: Generate Invoice Number ============
+const generateInvoiceNumber = async (operatorId) => {
+    const year = new Date().getFullYear();
+    const count = await Invoice.countDocuments({
+        operatorId: operatorId,
+        createdAt: {
+            $gte: new Date(year, 0, 1),
+            $lte: new Date(year, 11, 31)
+        }
+    });
+    const sequence = String(count + 1).padStart(4, '0');
+    return `INV-${year}-${sequence}`;
 };
 
 module.exports = {

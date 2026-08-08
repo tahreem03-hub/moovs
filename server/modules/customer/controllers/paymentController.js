@@ -11,7 +11,7 @@ const getPaymentMethods = async (req, res) => {
     try {
         const contact = await Contact.findOne({ 
             userId: req.user._id,
-            isDeleted: false 
+             
         });
 
         if (!contact) {
@@ -55,8 +55,7 @@ const addPaymentMethod = async (req, res) => {
         } = req.body;
 
         const contact = await Contact.findOne({ 
-            userId: req.user._id,
-            isDeleted: false 
+            userId: req.user._id
         });
 
         if (!contact) {
@@ -121,7 +120,7 @@ const deletePaymentMethod = async (req, res) => {
 
         const contact = await Contact.findOne({ 
             userId: req.user._id,
-            isDeleted: false 
+             
         });
 
         if (!contact) {
@@ -185,7 +184,7 @@ const setDefaultPaymentMethod = async (req, res) => {
 
         const contact = await Contact.findOne({ 
             userId: req.user._id,
-            isDeleted: false 
+             
         });
 
         if (!contact) {
@@ -244,7 +243,7 @@ const getPaymentHistory = async (req, res) => {
 
         const contact = await Contact.findOne({ 
             userId: req.user._id,
-            isDeleted: false 
+             
         });
 
         if (!contact) {
@@ -258,7 +257,7 @@ const getPaymentHistory = async (req, res) => {
         const payments = await Reservation.find({
             bookingContact: contact._id,
             paymentStatus: 'paid',
-            isDeleted: false
+            
         })
         .populate('vehicle', 'name type')
         .select('reservationNumber pickupDateTime totalAmount paymentStatus paymentMethod')
@@ -269,7 +268,7 @@ const getPaymentHistory = async (req, res) => {
         const total = await Reservation.countDocuments({
             bookingContact: contact._id,
             paymentStatus: 'paid',
-            isDeleted: false
+            
         });
 
         return res.status(200).json({
@@ -292,7 +291,7 @@ const getPaymentHistory = async (req, res) => {
 };
 
 // ============================================
-// 6. PAY INVOICE
+// 6. PAY INVOICE (FIXED)
 // ============================================
 const payInvoice = async (req, res) => {
     try {
@@ -301,7 +300,6 @@ const payInvoice = async (req, res) => {
 
         const contact = await Contact.findOne({ 
             userId: req.user._id,
-            isDeleted: false 
         });
 
         if (!contact) {
@@ -313,7 +311,7 @@ const payInvoice = async (req, res) => {
 
         const invoice = await Invoice.findOne({
             _id: id,
-            contactId: contact._id,
+            customerId: contact._id,
             isDeleted: false,
             status: { $ne: 'paid' }
         });
@@ -325,7 +323,7 @@ const payInvoice = async (req, res) => {
             });
         }
 
-        let amountToPay = invoice.amountCents - (invoice.paidAmountCents || 0);
+        let amountToPay = invoice.total - (invoice.paidAmount || 0);
         let cashbackApplied = 0;
 
         // Apply cashback if requested
@@ -356,10 +354,9 @@ const payInvoice = async (req, res) => {
             }
         }
 
-        // Process payment (Stripe integration - placeholder)
+        // Process payment
         let paymentResult = null;
         if (amountToPay > 0 && paymentMethodId) {
-            // Find the payment method
             const paymentMethod = contact.paymentMethods.find(
                 pm => pm._id.toString() === paymentMethodId
             );
@@ -371,7 +368,6 @@ const payInvoice = async (req, res) => {
                 });
             }
 
-            // Process payment (you'll integrate Stripe here)
             paymentResult = await processStripePayment({
                 amount: amountToPay,
                 paymentMethodId: paymentMethod.gatewayPaymentMethodId,
@@ -380,11 +376,11 @@ const payInvoice = async (req, res) => {
             });
         }
 
-        // Update invoice
-        invoice.paidAmountCents = (invoice.paidAmountCents || 0) + (amountToPay || 0);
-        invoice.cashbackAppliedCents = (invoice.cashbackAppliedCents || 0) + cashbackApplied;
+        // ✅ FIX: Update invoice with correct fields
+        invoice.paidAmount = (invoice.paidAmount || 0) + (amountToPay || 0);
+        invoice.cashbackApplied = (invoice.cashbackApplied || 0) + cashbackApplied;
         
-        if (invoice.paidAmountCents >= invoice.amountCents) {
+        if (invoice.paidAmount >= invoice.total) {
             invoice.status = 'paid';
             invoice.paidAt = new Date();
         }
@@ -417,6 +413,7 @@ const payInvoice = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Pay invoice error:', error);
         return res.status(500).json({ 
             success: false, 
             message: error.message 

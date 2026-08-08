@@ -8,8 +8,7 @@ const CashbackTransaction = require('../../../models/cashbackTransactions'); // 
 const getCashbackSummary = async (req, res) => {
     try {
         const contact = await Contact.findOne({ 
-            userId: req.user._id,
-            isDeleted: false 
+            userId: req.user._id, 
         });
 
         if (!contact) {
@@ -60,8 +59,7 @@ const getCashbackLedger = async (req, res) => {
         const skip = (page - 1) * limit;
 
         const contact = await Contact.findOne({ 
-            userId: req.user._id,
-            isDeleted: false 
+            userId: req.user._id, 
         });
 
         if (!contact) {

@@ -27,12 +27,6 @@ const sendDriverCredentials = async ({ email, firstName, tempPassword, companyNa
 
     // If SMTP not configured, just log the credentials
     if (!transporter) {
-        console.log('=========================================');
-        console.log('📧 EMAIL NOT SENT - SMTP NOT CONFIGURED');
-        console.log(`To: ${email}`);
-        console.log(`Subject: Your Driver Account Credentials - MOOVS`);
-        console.log(`Temporary Password: ${tempPassword}`);
-        console.log('=========================================');
         return { sent: false, reason: 'smtp-not-configured' };
     }
 
@@ -85,14 +79,6 @@ const sendDriverCredentials = async ({ email, firstName, tempPassword, companyNa
         const info = await transporter.sendMail(mailOptions);
         return { sent: true, messageId: info.messageId };
     } catch (error) {
-        console.error('❌ Error sending credentials email:', error.message);
-
-        console.log('=========================================');
-        console.log('📧 EMAIL FAILED BUT CREDENTIALS ARE:');
-        console.log(`Email: ${email}`);
-        console.log(`Password: ${tempPassword}`);
-        console.log('=========================================');
-
         return { sent: false, reason: 'send-failed', error: error.message };
     }
 };

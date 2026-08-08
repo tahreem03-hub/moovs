@@ -9,7 +9,6 @@ const getActiveRide = async (req, res) => {
     try {
         const contact = await Contact.findOne({ 
             userId: req.user._id,
-            isDeleted: false 
         });
 
         if (!contact) {
@@ -59,7 +58,6 @@ const trackRide = async (req, res) => {
 
         const contact = await Contact.findOne({ 
             userId: req.user._id,
-            isDeleted: false 
         });
 
         if (!contact) {

@@ -104,8 +104,7 @@ const vehicleSchema = new Schema({
         required: true,
         index: true
     },
-
-    id: { type: String, unique: true },
+    id: { type: String, unique: true, default: () => new mongoose.Types.ObjectId().toString() },
 
     /* required info */
     name: { type: String, trim: true, required: true },

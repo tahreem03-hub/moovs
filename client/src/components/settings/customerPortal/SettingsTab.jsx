@@ -117,7 +117,6 @@ const SettingsTab = () => {
       );
       if (data.success) {
         setVehicles(data.vehicles || []);
-        console.log('✅ Fetched vehicles:', data.vehicles);
       }
     } catch (error) {
       console.error('Failed to fetch vehicles:', error);

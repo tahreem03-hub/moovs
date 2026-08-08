@@ -1,26 +1,20 @@
-// modules/customer/controllers/authController.js
 const User = require('../../../models/User');
 const Contact = require('../../../models/Contact');
 const jwt = require('jsonwebtoken');
+const sendToken = require('../../../utils/jwtToken'); 
 
 // ============================================
 // 1. REGISTER
 // ============================================
-
-// modules/customer/controllers/authController.js
-
 const register = async (req, res) => {
     try {
-        const { 
-            firstName, lastName, email, password, phone,
-            operatorId  // ← From the form URL
-        } = req.body;
+        const { firstName, lastName, email, password, phone, operatorId } = req.body;
 
-        // Validate operatorId (must be provided)
+        // Validate operatorId
         if (!operatorId) {
             return res.status(400).json({
                 success: false,
-                message: 'Operator ID is required. Please register through your operator\'s form.'
+                message: 'Operator ID is required'
             });
         }
 
@@ -34,7 +28,7 @@ const register = async (req, res) => {
         if (!operator) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid operator. Please contact support.'
+                message: 'Invalid operator'
             });
         }
 
@@ -46,14 +40,13 @@ const register = async (req, res) => {
         if (existingUser) {
             return res.status(400).json({
                 success: false,
-                message: 'Email already registered. Please login.'
+                message: 'Email already registered'
             });
         }
 
-        // Check if contact exists (maybe guest booking)
+        // Check if contact exists
         let contact = await Contact.findOne({ 
-            email: email.toLowerCase(),
-            isDeleted: false
+            email: email.toLowerCase()
         });
 
         // Create User
@@ -65,14 +58,13 @@ const register = async (req, res) => {
             role: 'customer',
             isActive: true,
             phone: phone,
-            CompanyName: null
+            CompanyName: operator.CompanyName || 'Customer'
         });
 
-        // Create or update Contact with operatorId
+        // Create or update Contact
         if (contact) {
-            // Update existing contact (from guest booking)
             contact.userId = user._id;
-            contact.createdBy = operatorId;  // ← Set operator
+            contact.createdBy = operatorId;
             contact.isRegistered = true;
             contact.registrationSource = 'self_register';
             contact.firstName = firstName;
@@ -85,56 +77,25 @@ const register = async (req, res) => {
             }
             await contact.save();
         } else {
-            // Create new contact
             contact = await Contact.create({
                 firstName,
                 lastName,
                 email: email.toLowerCase(),
                 phone: { number: phone, countryCode: '+1' },
                 userId: user._id,
-                createdBy: operatorId,  // ← Set operator from form
+                createdBy: operatorId,
                 isRegistered: true,
                 registrationSource: 'self_register',
                 isActive: true
             });
         }
 
-        // Generate token
-        const token = jwt.sign(
-            { id: user._id },
-            process.env.JWT_SECRET_KEY,
-            { expiresIn: process.env.JWT_EXPIRES || '7d' }
-        );
-
-        return res.status(201).json({
-            success: true,
-            message: 'Registration successful',
-            token,
-            user: {
-                _id: user._id,
-                email: user.email,
-                role: user.role
-            },
-            contact: {
-                _id: contact._id,
-                firstName: contact.firstName,
-                lastName: contact.lastName,
-                email: contact.email,
-                phone: contact.phone,
-                operatorId: contact.createdBy  // ← Return operator
-            }
-        });
+        // ✅ Use sendToken utility
+        const message = 'Registration successful';
+        sendToken(user, 201, res, message);
 
     } catch (error) {
         console.error('Registration error:', error);
-        
-        if (error.code === 11000) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email already exists. Please login.'
-            });
-        }
-        
         return res.status(500).json({ 
             success: false, 
             message: error.message 
@@ -149,12 +110,11 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Find user with role 'customer'
         const user = await User.findOne({ 
             email: email.toLowerCase(),
             role: 'customer',
             isActive: true
-        });
+        }).select('+password');
 
         if (!user) {
             return res.status(401).json({
@@ -171,34 +131,21 @@ const login = async (req, res) => {
             });
         }
 
-        // Get contact profile
+        // Get contact
         const contact = await Contact.findOne({ 
-            userId: user._id,
+            userId: user._id
         });
 
-        // Update last login
-        user.lastLoginAt = new Date();
-        await user.save();
+        // ✅ Add contact to user object before sending
+        user._doc = user._doc || {};
+        user._doc.contact = contact;
 
-        const token = jwt.sign(
-            { id: user._id },
-            process.env.JWT_SECRET_KEY,
-            { expiresIn: process.env.JWT_EXPIRES || '7d' }
-        );
-
-        return res.status(200).json({
-            success: true,
-            message: 'Login successful',
-            token,
-            user: {
-                _id: user._id,
-                email: user.email,
-                role: user.role
-            },
-            contact
-        });
+        // ✅ Use sendToken utility
+        const message = 'Login successful';
+        sendToken(user, 200, res, message);
 
     } catch (error) {
+        console.error('Login error:', error);
         return res.status(500).json({ 
             success: false, 
             message: error.message 
@@ -207,14 +154,14 @@ const login = async (req, res) => {
 };
 
 // ============================================
-// 3. UPGRADE GUEST (Operator-created contact)
+// 3. UPGRADE GUEST
 // ============================================
 const upgradeGuest = async (req, res) => {
     try {
         const { email, password, firstName, lastName, phone } = req.body;
 
         const contact = await Contact.findOne({ 
-            email: email.toLowerCase(),
+            email: email.toLowerCase()
         });
 
         if (!contact) {
@@ -231,7 +178,6 @@ const upgradeGuest = async (req, res) => {
             });
         }
 
-        // Check if user exists
         let user = await User.findOne({ 
             email: email.toLowerCase() 
         });
@@ -268,25 +214,16 @@ const upgradeGuest = async (req, res) => {
         }
         await contact.save();
 
-        const token = jwt.sign(
-            { id: user._id },
-            process.env.JWT_SECRET_KEY,
-            { expiresIn: process.env.JWT_EXPIRES || '7d' }
-        );
+        // ✅ Add contact to user object
+        user._doc = user._doc || {};
+        user._doc.contact = contact;
 
-        return res.status(200).json({
-            success: true,
-            message: 'Account created successfully',
-            token,
-            user: {
-                _id: user._id,
-                email: user.email,
-                role: user.role
-            },
-            contact
-        });
+        // ✅ Use sendToken
+        const message = 'Account created successfully';
+        sendToken(user, 200, res, message);
 
     } catch (error) {
+        console.error('Upgrade error:', error);
         return res.status(500).json({ 
             success: false, 
             message: error.message 
@@ -295,15 +232,40 @@ const upgradeGuest = async (req, res) => {
 };
 
 // ============================================
-// 4. GET PROFILE (Protected - uses middleware)
+// 4. LOGOUT
+// ============================================
+const logout = async (req, res) => {
+    try {
+        // Clear cookie
+        res.cookie('token', '', {
+            expires: new Date(0),
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            path: '/'
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Logged out successfully'
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// ============================================
+// 5. GET PROFILE
 // ============================================
 const getProfile = async (req, res) => {
     try {
-        // req.user is set by isAuthenticated middleware
         const user = await User.findById(req.user._id).select('-password');
         
         const contact = await Contact.findOne({ 
-            userId: user._id,
+            userId: user._id
         });
 
         if (!contact) {
@@ -326,6 +288,7 @@ const getProfile = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Profile error:', error);
         return res.status(500).json({ 
             success: false, 
             message: error.message 
@@ -334,7 +297,7 @@ const getProfile = async (req, res) => {
 };
 
 // ============================================
-// 5. UPDATE PROFILE
+// 6. UPDATE PROFILE
 // ============================================
 const updateProfile = async (req, res) => {
     try {
@@ -345,7 +308,7 @@ const updateProfile = async (req, res) => {
         } = req.body;
 
         const contact = await Contact.findOne({ 
-            userId: req.user._id,
+            userId: req.user._id
         });
 
         if (!contact) {
@@ -355,7 +318,6 @@ const updateProfile = async (req, res) => {
             });
         }
 
-        // Update contact
         if (firstName) contact.firstName = firstName;
         if (lastName) contact.lastName = lastName;
         if (phone) {
@@ -371,7 +333,6 @@ const updateProfile = async (req, res) => {
 
         await contact.save();
 
-        // Update user name
         if (firstName || lastName) {
             const user = await User.findById(req.user._id);
             if (firstName) user.Fname = firstName;
@@ -386,6 +347,7 @@ const updateProfile = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Update profile error:', error);
         return res.status(500).json({ 
             success: false, 
             message: error.message 
@@ -394,7 +356,7 @@ const updateProfile = async (req, res) => {
 };
 
 // ============================================
-// 6. CHANGE PASSWORD
+// 7. CHANGE PASSWORD
 // ============================================
 const changePassword = async (req, res) => {
     try {
@@ -425,6 +387,7 @@ const changePassword = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Change password error:', error);
         return res.status(500).json({ 
             success: false, 
             message: error.message 
@@ -436,6 +399,7 @@ module.exports = {
     register,
     login,
     upgradeGuest,
+    logout,
     getProfile,
     updateProfile,
     changePassword

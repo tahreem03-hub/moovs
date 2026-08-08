@@ -1,30 +1,78 @@
 // modules/customer/controllers/bookingController.js
+
 const Contact = require('../../../models/Contact');
 const Quote = require('../../../models/Quote');
 const Reservation = require('../../../models/Reservation');
 const Vehicle = require('../../../models/Vehicle');
 const Invoice = require('../../../models/Invoice');
+const User = require('../../../models/User');
+const Driver = require('../../../models/settings/Driver');
+
+// ============================================
+// HELPER: Get Operator ID from Multiple Sources
+// ============================================
+const getOperatorId = async (contact, vehicleType = null) => {
+    // Priority 1: From contact.createdBy (operator who created them)
+    if (contact.createdBy) {
+        return contact.createdBy;
+    }
+
+    // Priority 2: From contact.company (if company is linked)
+    if (contact.company) {
+        try {
+            const Company = require('../../../models/Company');
+            const company = await Company.findById(contact.company);
+            if (company && company.operatorId) {
+                return company.operatorId;
+            }
+        } catch (error) {
+            console.log('Company lookup error:', error.message);
+        }
+    }
+
+    // Priority 3: From vehicle type (try to find any vehicle of this type)
+    if (vehicleType) {
+        const vehicle = await Vehicle.findOne({
+            type: vehicleType,
+            display: true,
+            isDeleted: false  
+        });
+        if (vehicle && vehicle.operatorId) {
+            return vehicle.operatorId;
+        }
+    }
+
+    // Priority 4: From any active operator (fallback)
+    const anyOperator = await User.findOne({
+        role: 'user',
+        isActive: true
+    });
+    if (anyOperator) {
+        return anyOperator._id;
+    }
+
+    return null;
+};
 
 // ============================================
 // 1. REQUEST QUOTE
 // ============================================
 const requestQuote = async (req, res) => {
     try {
-        const { 
-            tripType, 
-            pickupDateTime, 
+        const {
+            tripType,
+            pickupDateTime,
             returnDateTime,
-            stops, 
-            passengerCount, 
+            stops,
+            passengerCount,
             luggageCount,
             vehicleType,
             specialRequirements,
             serviceType
         } = req.body;
 
-        const contact = await Contact.findOne({ 
-            userId: req.user._id,
-             
+        const contact = await Contact.findOne({
+            userId: req.user._id,  
         });
 
         if (!contact) {
@@ -34,39 +82,118 @@ const requestQuote = async (req, res) => {
             });
         }
 
-        // Validate stops
-        if (!stops || stops.length < 2) {
+        // Get operator ID
+        const operatorId = await getOperatorId(contact, vehicleType);
+
+        if (!operatorId) {
             return res.status(400).json({
                 success: false,
-                message: 'At least pickup and dropoff stops are required'
+                message: 'No operator associated with this account. Please contact support.'
             });
         }
 
-        // Create quote
-        const quote = await Quote.create({
-            operatorId: null, // Will be assigned when operator accepts
+        // ============================================
+        // FIND VEHICLE - IMPROVED LOGIC
+        // ============================================
+        let vehicleId = null;
+
+        // 1. Try to find vehicle by type and operator
+        if (vehicleType) {
+            const vehicle = await Vehicle.findOne({
+                type: vehicleType,
+                operatorId: operatorId,
+                display: true,
+                isDeleted: false  
+            });
+            if (vehicle) {
+                vehicleId = vehicle._id;
+            }
+        }
+
+        // 2. If no vehicle found by type, try any vehicle for this operator
+        if (!vehicleId) {
+            const vehicle = await Vehicle.findOne({
+                operatorId: operatorId,
+                display: true,  
+            });
+            if (vehicle) {
+                vehicleId = vehicle._id;
+            }
+        }
+
+        // 3. If still no vehicle, try any vehicle (fallback)
+        if (!vehicleId) {
+            const vehicle = await Vehicle.findOne({
+                display: true,
+                isDeleted: false  
+            });
+            if (vehicle) {
+                vehicleId = vehicle._id;
+            }
+        }
+
+        // 4. If still no vehicle, return error
+        if (!vehicleId) {
+            return res.status(404).json({
+                success: false,
+                message: 'No vehicles available. Please contact support.'
+            });
+        }
+
+        // ============================================
+        // FORMAT STOPS FOR QUOTE MODEL
+        // ============================================
+        const formattedStops = stops.map((stop, index) => {
+            const stopData = {
+                type: index === 0 ? 'pickup' : (index === stops.length - 1 ? 'dropoff' : 'stop'),
+                locationType: 'address',
+                order: index,
+                notes: stop.notes || ''
+            };
+
+            if (typeof stop.address === 'string') {
+                stopData.address = {
+                    street: stop.address,
+                    city: '',
+                    state: '',
+                    zipCode: '',
+                    country: 'US',
+                    formatted: stop.address
+                };
+            } else {
+                stopData.address = stop.address;
+            }
+
+            return stopData;
+        });
+
+        // ============================================
+        // CREATE QUOTE WITH VEHICLE
+        // ============================================
+        const quoteData = {
+            operatorId: operatorId,
             bookingContact: contact._id,
             passenger: contact._id,
             tripType: tripType || 'one_way',
+            orderType: 'retail',
             pickupDateTime: new Date(pickupDateTime),
             dropoffDateTime: returnDateTime ? new Date(returnDateTime) : null,
-            stops: stops.map((stop, index) => ({
-                type: index === 0 ? 'pickup' : (index === stops.length - 1 ? 'dropoff' : 'stop'),
-                locationType: stop.locationType || 'address',
-                address: stop.address,
-                airport: stop.airport,
-                order: index,
-                notes: stop.notes
-            })),
+            stops: formattedStops,
             passengerCount: passengerCount || 1,
-            driverNote: specialRequirements,
-            tripNotes: specialRequirements,
-            vehicle: vehicleType || null, // Will be assigned later
+            driverNote: specialRequirements || '',
+            tripNotes: specialRequirements || '',
+            vehicle: vehicleId,
             status: 'new',
-            createdBy: req.user._id
-        });
+            createdBy: req.user._id,
+            source: 'customer_portal'
+        };
 
-        // Calculate pricing (you can implement your pricing engine here)
+        console.log('Quote Data:', JSON.stringify(quoteData, null, 2));
+
+        // Create the quote
+        const quote = await Quote.create(quoteData);
+
+        // Calculate pricing
         const pricing = await calculatePrice(quote);
         quote.pricing = pricing;
         quote.status = 'sent';
@@ -79,9 +206,23 @@ const requestQuote = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        console.error('Quote error:', error);
+
+        if (error.name === 'ValidationError') {
+            const errors = Object.keys(error.errors).map(key => ({
+                field: key,
+                message: error.errors[key].message
+            }));
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
@@ -91,17 +232,10 @@ const requestQuote = async (req, res) => {
 // ============================================
 const getQuotes = async (req, res) => {
     try {
-        const { 
-            status, 
-            from, 
-            to, 
-            limit = 20, 
-            page = 1 
-        } = req.query;
+        const { status, limit = 20, page = 1 } = req.query;
 
-        const contact = await Contact.findOne({ 
+        const contact = await Contact.findOne({
             userId: req.user._id,
-             
         });
 
         if (!contact) {
@@ -114,12 +248,10 @@ const getQuotes = async (req, res) => {
         const skip = (page - 1) * limit;
         const filter = {
             bookingContact: contact._id,
-            
+            isDeleted: false  
         };
 
         if (status) filter.status = status;
-        if (from) filter.createdAt = { $gte: new Date(from) };
-        if (to) filter.createdAt = { ...filter.createdAt, $lte: new Date(to) };
 
         const quotes = await Quote.find(filter)
             .populate('vehicle', 'name type images')
@@ -141,19 +273,19 @@ const getQuotes = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
 
 // ============================================
-// 3. CREATE RESERVATION (Book from quote or direct)
+// 3. CREATE RESERVATION
 // ============================================
 const createReservation = async (req, res) => {
     try {
-        const { 
+        const {
             quoteId,
             pickupDateTime,
             returnDateTime,
@@ -166,15 +298,24 @@ const createReservation = async (req, res) => {
             paymentMethod
         } = req.body;
 
-        const contact = await Contact.findOne({ 
+        const contact = await Contact.findOne({
             userId: req.user._id,
-             
         });
 
         if (!contact) {
             return res.status(404).json({
                 success: false,
                 message: 'Customer profile not found'
+            });
+        }
+
+        // Get operator ID
+        const operatorId = await getOperatorId(contact);
+
+        if (!operatorId) {
+            return res.status(400).json({
+                success: false,
+                message: 'No operator associated with this account'
             });
         }
 
@@ -187,7 +328,7 @@ const createReservation = async (req, res) => {
                 _id: quoteId,
                 bookingContact: contact._id,
                 status: { $in: ['sent', 'quoted'] },
-                
+                isDeleted: false  
             });
 
             if (!quote) {
@@ -215,33 +356,66 @@ const createReservation = async (req, res) => {
                 });
             }
 
+            // Format stops for reservation
+            const formattedStops = stops.map((stop, index) => {
+                const stopData = {
+                    type: index === 0 ? 'pickup' : (index === stops.length - 1 ? 'dropoff' : 'stop'),
+                    locationType: 'address',
+                    order: index,
+                    notes: stop.notes || ''
+                };
+
+                if (typeof stop.address === 'string') {
+                    stopData.address = {
+                        street: stop.address,
+                        city: '',
+                        state: '',
+                        zipCode: '',
+                        country: 'US',
+                        formatted: stop.address
+                    };
+                } else {
+                    stopData.address = stop.address;
+                }
+
+                return stopData;
+            });
+
             tripData = {
-                stops,
+                stops: formattedStops,
                 passengerCount: passengerCount || 1,
                 pickupDateTime: new Date(pickupDateTime),
                 returnDateTime: returnDateTime ? new Date(returnDateTime) : null,
                 tripType: req.body.tripType || 'one_way',
                 serviceType: serviceType || 'standard',
-                specialRequirements
+                specialRequirements: specialRequirements || ''
             };
         }
 
-        // Find available vehicle
         let vehicle = null;
         if (vehicleId) {
             vehicle = await Vehicle.findOne({
                 _id: vehicleId,
-                isActive: true,
-                
+                operatorId: operatorId,
+                display: true,
+                isDeleted: false  
             });
         } else if (quote && quote.vehicle) {
             vehicle = await Vehicle.findOne({
                 _id: quote.vehicle,
-                isActive: true,
-                
+                operatorId: operatorId,
+                display: true,
+                isDeleted: false  
             });
         }
 
+        // If no vehicle found, try to find any vehicle
+        if (!vehicle) {
+            vehicle = await Vehicle.findOne({
+                operatorId: operatorId,
+                display: true,
+            });
+        }
         if (!vehicle) {
             return res.status(404).json({
                 success: false,
@@ -253,22 +427,22 @@ const createReservation = async (req, res) => {
         const reservation = await Reservation.create({
             bookingContact: contact._id,
             passenger: contact._id,
-            tripType: tripData.tripType,
-            orderType: 'retail',
-            serviceType: tripData.serviceType,
+            tripType: tripData.tripType || 'one_way',
+            orderType: 'null', // not taken from frontend, to be added
+            serviceType: tripData.serviceType || 'standard',
             pickupDateTime: tripData.pickupDateTime,
-            dropoffDateTime: tripData.returnDateTime,
+            dropoffDateTime: tripData.returnDateTime || null,
             stops: tripData.stops,
-            passengerCount: tripData.passengerCount,
+            passengerCount: tripData.passengerCount || 1,
             luggageCount: luggageCount || 0,
-            driverNote: tripData.specialRequirements,
-            tripNotes: tripData.specialRequirements,
+            driverNote: tripData.specialRequirements || '',
+            tripNotes: tripData.specialRequirements || '',
             vehicle: vehicle._id,
-            quote: quote?._id,
-            status: 'confirmed',
-            confirmedAt: new Date(),
+            quote: quote?._id || null,
+            status: 'pending',
             source: 'customer_portal',
-            createdBy: req.user._id
+            createdBy: req.user._id,
+            operatorId: operatorId
         });
 
         // Update quote status if used
@@ -277,8 +451,8 @@ const createReservation = async (req, res) => {
             await quote.save();
         }
 
-        // Generate invoice
-        const invoice = await createInvoice(reservation, contact);
+        const amountCents = quote?.pricing?.total || 0;
+        const invoice = await createInvoice(reservation, contact, req, amountCents);
 
         // Populate for response
         await reservation.populate('vehicle', 'name type images');
@@ -294,9 +468,10 @@ const createReservation = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        console.error('Reservation error:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
@@ -306,19 +481,18 @@ const createReservation = async (req, res) => {
 // ============================================
 const getReservations = async (req, res) => {
     try {
-        const { 
-            status, 
-            from, 
-            to, 
-            limit = 20, 
+        const {
+            status,
+            from,
+            to,
+            limit = 20,
             page = 1,
             sortBy = 'pickupDateTime',
             sortOrder = 'desc'
         } = req.query;
 
-        const contact = await Contact.findOne({ 
+        const contact = await Contact.findOne({
             userId: req.user._id,
-             
         });
 
         if (!contact) {
@@ -331,16 +505,23 @@ const getReservations = async (req, res) => {
         const skip = (page - 1) * limit;
         const filter = {
             bookingContact: contact._id,
-            
+            isDeleted: false  
         };
 
         if (status) {
             const statusMap = {
-                'upcoming': { status: 'confirmed', pickupDateTime: { $gt: new Date() } },
-                'in_progress': { status: { $in: ['started', 'en_route', 'arrived', 'on_board'] } },
-                'completed': { status: 'completed' },
-                'cancelled': { status: 'cancelled' },
-                'no_show': { status: 'no_show' }
+                'upcoming': {
+                    status: { $in: ['pending', 'confirmed'] }
+                },
+                'in_progress': {
+                    status: { $in: ['dispatched', 'started'] }
+                },
+                'completed': {
+                    status: 'completed'
+                },
+                'cancelled': {
+                    status: { $in: ['cancelled', 'no_show'] }
+                }
             };
             if (statusMap[status]) {
                 Object.assign(filter, statusMap[status]);
@@ -348,7 +529,6 @@ const getReservations = async (req, res) => {
                 filter.status = status;
             }
         }
-
         if (from) filter.pickupDateTime = { $gte: new Date(from) };
         if (to) filter.pickupDateTime = { ...filter.pickupDateTime, $lte: new Date(to) };
 
@@ -358,7 +538,6 @@ const getReservations = async (req, res) => {
         const reservations = await Reservation.find(filter)
             .populate('vehicle', 'name type images licensePlate')
             .populate('driver', 'firstName lastName phone photo')
-            .populate('invoice')
             .sort(sortOptions)
             .skip(skip)
             .limit(parseInt(limit));
@@ -377,9 +556,9 @@ const getReservations = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
@@ -391,9 +570,8 @@ const getReservationDetail = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const contact = await Contact.findOne({ 
+        const contact = await Contact.findOne({
             userId: req.user._id,
-             
         });
 
         if (!contact) {
@@ -406,12 +584,10 @@ const getReservationDetail = async (req, res) => {
         const reservation = await Reservation.findOne({
             _id: id,
             bookingContact: contact._id,
-            
+            isDeleted: false  
         })
-        .populate('vehicle', 'name type images licensePlate')
-        .populate('driver', 'firstName lastName phone photo')
-        .populate('quote')
-        .populate('invoice');
+            .populate('vehicle', 'name type images licensePlate')
+            .populate('driver', 'firstName lastName phone photo')
 
         if (!reservation) {
             return res.status(404).json({
@@ -420,25 +596,16 @@ const getReservationDetail = async (req, res) => {
             });
         }
 
-        // Get status timeline
-        const statusTimeline = await getStatusTimeline(reservation);
-
-        // Get payment breakdown
-        const paymentBreakdown = await getPaymentBreakdown(reservation);
-
         return res.status(200).json({
             success: true,
-            data: {
-                reservation,
-                statusTimeline,
-                paymentBreakdown
-            }
+            data: reservation
         });
 
     } catch (error) {
-        return res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        console.error('Get reservation detail error:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
@@ -451,9 +618,8 @@ const cancelReservation = async (req, res) => {
         const { id } = req.params;
         const { reason } = req.body;
 
-        const contact = await Contact.findOne({ 
+        const contact = await Contact.findOne({
             userId: req.user._id,
-             
         });
 
         if (!contact) {
@@ -466,7 +632,7 @@ const cancelReservation = async (req, res) => {
         const reservation = await Reservation.findOne({
             _id: id,
             bookingContact: contact._id,
-            
+            isDeleted: false  
         });
 
         if (!reservation) {
@@ -484,42 +650,22 @@ const cancelReservation = async (req, res) => {
             });
         }
 
-        // Check cancellation policy
-        const hoursUntilPickup = (new Date(reservation.pickupDateTime) - new Date()) / (1000 * 60 * 60);
-        let cancellationFee = 0;
-
-        if (hoursUntilPickup < 2) {
-            cancellationFee = reservation.totalAmount * 0.5; // 50% fee
-        } else if (hoursUntilPickup < 12) {
-            cancellationFee = reservation.totalAmount * 0.25; // 25% fee
-        }
-
         // Update reservation
         reservation.status = 'cancelled';
         reservation.cancelledAt = new Date();
         reservation.cancellationReason = reason || 'Customer requested cancellation';
-        reservation.cancellationFee = cancellationFee;
         await reservation.save();
-
-        // Process refund if payment was made
-        if (reservation.paymentStatus === 'paid') {
-            await processRefund(reservation);
-        }
 
         return res.status(200).json({
             success: true,
             message: 'Reservation cancelled successfully',
-            data: {
-                reservation,
-                cancellationFee,
-                refundAmount: reservation.totalAmount - cancellationFee
-            }
+            data: reservation
         });
 
     } catch (error) {
-        return res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
@@ -532,9 +678,8 @@ const rebookReservation = async (req, res) => {
         const { id } = req.params;
         const { pickupDateTime } = req.body;
 
-        const contact = await Contact.findOne({ 
+        const contact = await Contact.findOne({
             userId: req.user._id,
-             
         });
 
         if (!contact) {
@@ -547,7 +692,7 @@ const rebookReservation = async (req, res) => {
         const oldReservation = await Reservation.findOne({
             _id: id,
             bookingContact: contact._id,
-            
+            isDeleted: false  
         });
 
         if (!oldReservation) {
@@ -557,11 +702,14 @@ const rebookReservation = async (req, res) => {
             });
         }
 
+        // Get operator ID
+        const operatorId = await getOperatorId(contact);
+
         // Find available vehicle
         const vehicle = await Vehicle.findOne({
             _id: oldReservation.vehicle,
-            isActive: true,
-            
+            display: true,
+            isDeleted: false  
         });
 
         if (!vehicle) {
@@ -589,7 +737,8 @@ const rebookReservation = async (req, res) => {
             status: 'confirmed',
             confirmedAt: new Date(),
             source: 'customer_portal_rebook',
-            createdBy: req.user._id
+            createdBy: req.user._id,
+            operatorId: operatorId
         });
 
         await newReservation.populate('vehicle', 'name type images');
@@ -601,9 +750,9 @@ const rebookReservation = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
@@ -623,9 +772,8 @@ const rateAndTip = async (req, res) => {
             });
         }
 
-        const contact = await Contact.findOne({ 
-            userId: req.user._id,
-             
+        const contact = await Contact.findOne({
+            userId: req.user._id,  
         });
 
         if (!contact) {
@@ -639,7 +787,7 @@ const rateAndTip = async (req, res) => {
             _id: id,
             bookingContact: contact._id,
             status: 'completed',
-            
+            isDeleted: false  
         });
 
         if (!reservation) {
@@ -664,16 +812,6 @@ const rateAndTip = async (req, res) => {
         reservation.ratedAt = new Date();
         await reservation.save();
 
-        // Update driver's average rating
-        if (reservation.driver) {
-            await updateDriverRating(reservation.driver);
-        }
-
-        // Process tip if any
-        if (tipAmountCents > 0) {
-            await processTip(reservation.driver, tipAmountCents, reservation._id);
-        }
-
         return res.status(200).json({
             success: true,
             message: 'Rating and tip submitted successfully',
@@ -685,27 +823,24 @@ const rateAndTip = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
 
 // ============================================
-// HELPER FUNCTIONS
+// HELPER: Calculate Price
 // ============================================
-
 const calculatePrice = async (quote) => {
-    // Implement your pricing engine here
-    // This is a basic example
-    let baseFare = 1000; // $10.00
-    let distanceFare = 500; // $5.00
-    let timeFare = 200; // $2.00
+    let baseFare = 1000;
+    let distanceFare = 500;
+    let timeFare = 200;
     let extras = 0;
     let surcharges = 0;
     let discount = 0;
-    let tax = 150; // $1.50
+    let tax = 150;
     let total = baseFare + distanceFare + timeFare + extras + surcharges + tax - discount;
 
     return {
@@ -724,99 +859,33 @@ const calculatePrice = async (quote) => {
     };
 };
 
-const createInvoice = async (reservation, contact) => {
-    // Create invoice for the reservation
+// ============================================
+// HELPER: Create Invoice
+// ============================================
+const createInvoice = async (reservation, contact, req, amountCents = 0) => {
     const invoice = await Invoice.create({
-        invoiceNumber: `INV-${Date.now()}`,
-        contactId: contact._id,
-        customerEmail: contact.email,
-        customerName: `${contact.firstName} ${contact.lastName}`,
+        operatorId: reservation.operatorId,
         reservationId: reservation._id,
-        amountCents: reservation.totalAmount || 0,
-        paidAmountCents: 0,
-        status: 'pending',
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        customerId: contact._id,
+        customerName: `${contact.firstName} ${contact.lastName}`,
+        customerEmail: contact.email,
         items: [
             {
                 description: `Transportation service - ${reservation.tripType}`,
                 quantity: 1,
-                unitPrice: reservation.totalAmount || 0,
-                total: reservation.totalAmount || 0
+                rate: amountCents,
+                amount: amountCents
             }
         ],
+        subtotal: amountCents,
+        total: amountCents,
+        currency: 'USD',
+        status: 'sent',
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         createdBy: req.user._id
     });
 
     return invoice;
-};
-
-const getStatusTimeline = async (reservation) => {
-    // Get all status events for this reservation
-    // You would need a TripStatusEvent model for this
-    return [
-        { status: 'confirmed', timestamp: reservation.confirmedAt, description: 'Booking confirmed' },
-        { status: 'dispatched', timestamp: reservation.dispatchedAt, description: 'Driver dispatched' },
-        { status: 'en_route', timestamp: reservation.enRouteAt, description: 'Driver en route to pickup' },
-        { status: 'arrived', timestamp: reservation.arrivedAt, description: 'Driver arrived at pickup' },
-        { status: 'on_board', timestamp: reservation.onBoardAt, description: 'Passenger on board' },
-        { status: 'completed', timestamp: reservation.completedAt, description: 'Trip completed' }
-    ].filter(event => event.timestamp);
-};
-
-const getPaymentBreakdown = async (reservation) => {
-    return {
-        baseFare: reservation.baseFare || 0,
-        distanceFare: reservation.distanceFare || 0,
-        timeFare: reservation.timeFare || 0,
-        extras: reservation.extras || 0,
-        surcharges: reservation.surcharges || 0,
-        tax: reservation.tax || 0,
-        discount: reservation.discount || 0,
-        tip: reservation.tipAmountCents || 0,
-        total: reservation.totalAmount || 0,
-        paid: reservation.paymentStatus === 'paid' ? reservation.totalAmount : 0,
-        due: reservation.paymentStatus === 'paid' ? 0 : reservation.totalAmount
-    };
-};
-
-const updateDriverRating = async (driverId) => {
-    const result = await Reservation.aggregate([
-        { $match: { 
-            driver: driverId, 
-            rating: { $exists: true, $ne: null },
-            
-        }},
-        { $group: {
-            _id: null,
-            avgRating: { $avg: '$rating' },
-            count: { $sum: 1 }
-        }}
-    ]);
-
-    if (result.length > 0) {
-        await Driver.findByIdAndUpdate(driverId, {
-            averageRating: result[0].avgRating,
-            ratingCount: result[0].count
-        });
-    }
-};
-
-const processTip = async (driverId, amount, reservationId) => {
-    // Add tip to driver's earnings
-    await DriverEarning.create({
-        driverId,
-        reservationId,
-        amountCents: amount,
-        type: 'tip',
-        status: 'pending'
-    });
-};
-
-const processRefund = async (reservation) => {
-    // Process refund through payment gateway
-    // Implementation depends on your payment provider
-    reservation.refundStatus = 'processing';
-    await reservation.save();
 };
 
 module.exports = {

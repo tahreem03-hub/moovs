@@ -58,8 +58,6 @@ const ReservationDetails = () => {
         }
     }, [id]);
 
-    console.log(drivers)
-
     const fetchReservation = async () => {
         try {
             setLoading(true);

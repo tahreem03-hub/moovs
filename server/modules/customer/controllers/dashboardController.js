@@ -11,7 +11,6 @@ const getHome = async (req, res) => {
     try {
         const contact = await Contact.findOne({ 
             userId: req.user._id,
-             
         });
 
         if (!contact) {
@@ -27,7 +26,7 @@ const getHome = async (req, res) => {
             status: { 
                 $in: ['confirmed', 'started', 'en_route', 'arrived', 'on_board'] 
             },
-            
+            isDeleted: false  // ✅ Added
         })
         .populate('vehicle', 'name type images licensePlate')
         .populate('driver', 'firstName lastName phone')
@@ -41,14 +40,14 @@ const getHome = async (req, res) => {
                 $gte: new Date(),
                 $lte: new Date(Date.now() + 24 * 60 * 60 * 1000)
             },
-            
+            isDeleted: false  // ✅ Added
         });
 
         // 3. Total rides taken
         const totalRides = await Reservation.countDocuments({
             bookingContact: contact._id,
             status: 'completed',
-            
+            isDeleted: false  // ✅ Added
         });
 
         // 4. Cashback balance
@@ -60,7 +59,7 @@ const getHome = async (req, res) => {
         // 6. Recent trips (last 5)
         const recentTrips = await Reservation.find({
             bookingContact: contact._id,
-            
+            isDeleted: false  // ✅ Added
         })
         .populate('vehicle', 'name type')
         .sort({ pickupDateTime: -1 })
@@ -93,6 +92,7 @@ const getHome = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Get home error:', error);
         return res.status(500).json({ 
             success: false, 
             message: error.message 
@@ -107,7 +107,6 @@ const getStats = async (req, res) => {
     try {
         const contact = await Contact.findOne({ 
             userId: req.user._id,
-             
         });
 
         if (!contact) {
@@ -140,7 +139,7 @@ const getStats = async (req, res) => {
             bookingContact: contact._id,
             status: 'completed',
             completedAt: { $gte: startDate },
-            
+            isDeleted: false  // ✅ Added
         });
 
         const totalTrips = completedTrips.length;
@@ -151,7 +150,7 @@ const getStats = async (req, res) => {
         const statusCounts = await Reservation.aggregate([
             { $match: { 
                 bookingContact: contact._id,
-                 
+                isDeleted: false  // ✅ Added
             }},
             { $group: {
                 _id: '$status',
@@ -164,7 +163,8 @@ const getStats = async (req, res) => {
             { $match: { 
                 bookingContact: contact._id,
                 status: 'completed',
-                completedAt: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 6)) }
+                completedAt: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 6)) },
+                isDeleted: false  // ✅ Added
             }},
             { $group: {
                 _id: { 
@@ -193,6 +193,7 @@ const getStats = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Get stats error:', error);
         return res.status(500).json({ 
             success: false, 
             message: error.message 
@@ -206,7 +207,10 @@ const getStats = async (req, res) => {
 
 const getCashbackBalance = async (contactId) => {
     const result = await CashbackTransaction.aggregate([
-        { $match: { contactId: contactId,  } },
+        { $match: { 
+            contactId: contactId,
+            isDeleted: false  // ✅ Added
+        }},
         { $group: {
             _id: null,
             balance: {
@@ -226,13 +230,13 @@ const getCashbackBalance = async (contactId) => {
 const getOutstandingBalance = async (contactId) => {
     const result = await Invoice.aggregate([
         { $match: { 
-            contactId: contactId,
+            customerId: contactId,  // ✅ Fixed: contactId → customerId (matches Invoice schema)
             status: { $ne: 'paid' },
-            
+            isDeleted: false  // ✅ Added
         }},
         { $group: {
             _id: null,
-            total: { $sum: '$amountCents' }
+            total: { $sum: '$total' }  // ✅ Fixed: amountCents → total (matches Invoice schema)
         }}
     ]);
     return result.length > 0 ? result[0].total : 0;
@@ -244,7 +248,7 @@ const getTotalSpent = async (contactId) => {
             bookingContact: contactId,
             status: 'completed',
             paymentStatus: 'paid',
-            
+            isDeleted: false  // ✅ Added
         }},
         { $group: {
             _id: null,

@@ -13,6 +13,7 @@ const {
     register,
     login,
     upgradeGuest,
+    logout,  
     getProfile,
     updateProfile,
     changePassword
@@ -73,15 +74,20 @@ const {
     getCashbackLedger
 } = require('../controllers/cashbackController');
 
+
+const { getAvailableVehicles } = require('../controllers/vehicleController');
+
+
 // ============================================
-// PUBLIC ROUTES (No Auth Required)
+// PUBLIC ROUTES
 // ============================================
 router.post('/auth/register', register);
 router.post('/auth/login', login);
 router.post('/auth/upgrade', upgradeGuest);
+router.get('/auth/logout', logout);  // ← Add logout route
 
 // ============================================
-// PROTECTED ROUTES (Auth Required)
+// PROTECTED ROUTES
 // ============================================
 router.use(isAuthenticated);
 router.use(authorizeCustomer);
@@ -154,6 +160,12 @@ router.get('/invoices/:id/download', downloadInvoicePDF);
 // ============ CASHBACK ============
 router.get('/cashback', getCashbackSummary);
 router.get('/cashback/ledger', getCashbackLedger);
+
+
+// ============================================
+// VEHICLES (Customer)
+// ============================================
+router.get('/vehicles', getAvailableVehicles);
 
 // ============ GUEST BOOKING (Optional - Allow guest to book without auth) ============
 // router.post('/guest/book', guestBooking);
