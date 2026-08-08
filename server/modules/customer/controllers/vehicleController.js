@@ -12,9 +12,6 @@ const getAvailableVehicles = async (req, res) => {
                 message: 'Customer profile not found'
             });
         }
-
-        console.log(contact);
-
         // 2. Get operator ID from contact
         const operatorId = contact.createdBy;
         if (!operatorId) {

@@ -4,7 +4,12 @@ import { Wallet, TrendingUp, TrendingDown, Receipt, RefreshCw } from 'lucide-rea
 
 const Cashback = () => {
     const [loading, setLoading] = useState(true);
-    const [summary, setSummary] = useState({ balance: 0, earned: 0, redeemed: 0 });
+    const [data, setData] = useState({
+        balance: 0,
+        earned: 0,
+        redeemed: 0,
+        recentTransactions: []
+    });
     const [transactions, setTransactions] = useState([]);
     const [filter, setFilter] = useState('all');
 
@@ -19,8 +24,23 @@ const Cashback = () => {
                 api.get('/cashback/ledger')
             ]);
 
-            if (summaryRes.data.success) setSummary(summaryRes.data.data);
-            if (ledgerRes.data.success) setTransactions(ledgerRes.data.data);
+            console.log('Summary Response:', summaryRes.data);
+            console.log('Ledger Response:', ledgerRes.data);
+
+            if (summaryRes.data.success) {
+                const summaryData = summaryRes.data.data;
+                // ✅ Handle both possible response structures
+                setData({
+                    balance: summaryData.balance || 0,
+                    earned: summaryData.summary?.earned || summaryData.earned || 0,
+                    redeemed: summaryData.summary?.redeemed || summaryData.redeemed || 0,
+                    recentTransactions: summaryData.recentTransactions || []
+                });
+            }
+            
+            if (ledgerRes.data.success) {
+                setTransactions(ledgerRes.data.data || []);
+            }
         } catch (error) {
             console.error('Fetch cashback error:', error);
         } finally {
@@ -59,15 +79,21 @@ const Cashback = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <p className="text-sm text-gray-600">Available Balance</p>
-                    <p className="text-2xl font-bold text-blue-600">${(summary.balance / 100).toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                        ${(data.balance / 100).toFixed(2)}
+                    </p>
                 </div>
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                     <p className="text-sm text-gray-600">Total Earned</p>
-                    <p className="text-2xl font-bold text-green-600">${(summary.earned / 100).toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-green-600">
+                        ${(data.earned / 100).toFixed(2)}
+                    </p>
                 </div>
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                     <p className="text-sm text-gray-600">Total Redeemed</p>
-                    <p className="text-2xl font-bold text-red-600">${(summary.redeemed / 100).toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-red-600">
+                        ${(data.redeemed / 100).toFixed(2)}
+                    </p>
                 </div>
             </div>
 
@@ -113,6 +139,11 @@ const Cashback = () => {
                                         <p className="text-sm text-gray-500">
                                             {new Date(tx.createdAt).toLocaleString()}
                                         </p>
+                                        {tx.metadata?.rate && (
+                                            <p className="text-xs text-gray-400">
+                                                Rate: {tx.metadata.rate}%
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="text-right">

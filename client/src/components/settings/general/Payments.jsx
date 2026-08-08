@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Plus, Banknote, CheckCircle, AlertCircle } from 'lucide-react';
+import { Save, Plus, Banknote, CheckCircle, AlertCircle, DollarSign, Percent } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -32,6 +32,14 @@ const Payments = () => {
     isSetupComplete: false
   });
 
+  const [cashbackSettings, setCashbackSettings] = useState({
+    enabled: true,
+    rate: 5,
+    minRideAmount: 0,
+    maxRedeemPercent: 100,
+    expiryDays: 365
+  });
+
   const [newBank, setNewBank] = useState({
     accountName: '',
     routingNumber: '',
@@ -41,6 +49,7 @@ const Payments = () => {
 
   useEffect(() => {
     fetchSettings();
+    fetchCashbackSettings();
   }, []);
 
   const fetchSettings = async () => {
@@ -57,9 +66,32 @@ const Payments = () => {
     }
   };
 
+  // ✅ Fetch Cashback Settings
+  const fetchCashbackSettings = async () => {
+    try {
+      const { data } = await axios.get(
+        `${import.meta.env.VITE_URL}/company-profile/cashback`
+      );
+      if (data.data) {
+        setCashbackSettings(prev => ({ ...prev, ...data.data }));
+      }
+    } catch (error) {
+      // If endpoint doesn't exist yet, use defaults
+      console.log('Cashback endpoint not found, using defaults');
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setSettings(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCashbackChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setCashbackSettings(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
   const handleBankChange = (e) => {
@@ -72,9 +104,10 @@ const Payments = () => {
     setSaving(true);
     try {
       await axios.patch(`${import.meta.env.VITE_URL}/company-profile/payments`, settings);
-      toast.success('Payment settings saved!');
+      await axios.patch(`${import.meta.env.VITE_URL}/company-profile/cashback`, cashbackSettings);
+      toast.success('All settings saved!');
     } catch (error) {
-      toast.error('Failed to save');
+      toast.error('Failed to save settings');
     } finally {
       setSaving(false);
     }
@@ -90,6 +123,7 @@ const Payments = () => {
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
+      {/* Payment Status */}
       <div className={`rounded-lg p-4 ${settings.isSetupComplete ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
         <div className="flex items-center gap-3">
           {settings.isSetupComplete ? (
@@ -103,6 +137,7 @@ const Payments = () => {
         </div>
       </div>
 
+      {/* Business Information */}
       <SectionTitle>Business Information</SectionTitle>
       <div className="space-y-4">
         <div>
@@ -126,6 +161,7 @@ const Payments = () => {
         </div>
       </div>
 
+      {/* Bank Account */}
       <SectionTitle>Bank Account</SectionTitle>
       {settings.bankAccounts.length > 0 && (
         <div className="space-y-2 mb-4">
@@ -171,10 +207,102 @@ const Payments = () => {
         </button>
       )}
 
+      {/* ============================================ */}
+      {/* ✅ CASHBACK SECTION - NEW */}
+      {/* ============================================ */}
+      <div className="pt-6 border-t border-gray-200">
+        <SectionTitle>Cashback Settings</SectionTitle>
+        <p className="text-sm text-gray-500 mb-4">
+          Configure cashback rewards for your customers
+        </p>
+
+        <div className="space-y-4">
+          {/* Enable/Disable */}
+          <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <DollarSign className={`w-5 h-5 ${cashbackSettings.enabled ? 'text-green-600' : 'text-gray-400'}`} />
+              <div>
+                <p className={`font-medium ${cashbackSettings.enabled ? 'text-green-700' : 'text-gray-500'}`}>
+                  {cashbackSettings.enabled ? 'Cashback Active' : 'Cashback Disabled'}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {cashbackSettings.enabled ? 'Customers earn cashback on every ride' : 'No cashback will be awarded'}
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                name="enabled"
+                checked={cashbackSettings.enabled}
+                onChange={handleCashbackChange}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          {/* Cashback Rate */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <FieldLabel>Cashback Rate (%)</FieldLabel>
+              <div className="relative">
+                <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="number"
+                  name="rate"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={cashbackSettings.rate}
+                  onChange={handleCashbackChange}
+                  disabled={!cashbackSettings.enabled}
+                  className={`${inputCls} pl-9 ${!cashbackSettings.enabled && 'opacity-50 cursor-not-allowed'}`}
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Percentage of ride total customers earn</p>
+            </div>
+
+            <div>
+              <FieldLabel>Max Redeem % of Invoice</FieldLabel>
+              <div className="relative">
+                <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="number"
+                  name="maxRedeemPercent"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={cashbackSettings.maxRedeemPercent}
+                  onChange={handleCashbackChange}
+                  disabled={!cashbackSettings.enabled}
+                  className={`${inputCls} pl-9 ${!cashbackSettings.enabled && 'opacity-50 cursor-not-allowed'}`}
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Max % of invoice that can be paid with cashback</p>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+            <p className="text-sm text-gray-600">
+              💡 Customers will earn <strong className="text-blue-600">{cashbackSettings.rate}%</strong> cashback on each ride.
+              They can redeem up to <strong className="text-blue-600">{cashbackSettings.maxRedeemPercent}%</strong> of their invoice total.
+              {!cashbackSettings.enabled && <span className="text-red-500 ml-2">Currently disabled.</span>}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Save Button */}
       <div className="pt-4 border-t border-gray-200">
-        <button type="submit" disabled={saving} className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60">
+        <button
+          type="submit"
+          disabled={saving}
+          className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60"
+        >
           <Save className="w-4 h-4" />
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? 'Saving...' : 'Save All Settings'}
         </button>
       </div>
     </form>

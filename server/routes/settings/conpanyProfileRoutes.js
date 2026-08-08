@@ -18,7 +18,9 @@ const {
   getCustomerPortalBranding,
   updateCustomerPortalBranding,
   getCustomerPortalPromoCodes,
-  updateCustomerPortalPromoCodes
+  updateCustomerPortalPromoCodes,
+  getCashbackSettings,
+  updateCashbackSettings
 } = require('../../controllers/settings/companyProfileController');
 const { isAuthenticated, authorizeOperator } = require('../../middleware/auth');
 const upload = require('../../middleware/multer');
@@ -44,6 +46,9 @@ router.patch('/payments', updatePaymentSettings);
 // ============ PREFERENCES TAB ============
 router.get('/preferences', getPreferenceSettings);
 router.patch('/preferences', updatePreferenceSettings);
+
+router.get('/cashback', getCashbackSettings);
+router.patch('/cashback', updateCashbackSettings);
 
 // ============ CUSTOMER PORTAL - PAYMENTS TAB ============
 router.get('/customer-portal/payments', getCustomerPortalPayments);

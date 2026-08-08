@@ -1,14 +1,73 @@
 // modules/customer/controllers/cashbackController.js
 const Contact = require('../../../models/Contact');
 const CashbackTransaction = require('../../../models/cashbackTransactions'); // ← From main models
+const CompanyProfile = require('../../../models/settings/CompanyProfile');
+
+// ============================================
+// GET CASHBACK RATE  => 5 is default rate
+// ============================================
+const getCashbackRate = async (operatorId) => {
+    try {
+        const profile = await CompanyProfile.findOne({ operatorId });
+        if (profile?.cashback?.enabled !== false) {
+            return profile?.cashback?.rate || 5;
+        }
+        return 0;
+    } catch (error) {
+        console.error('Error getting cashback rate:', error);
+        return 5;
+    }
+};
+
+// ============================================
+// EARN CASHBACK
+// ============================================
+const earnCashback = async (reservation, contact) => {
+    try {
+        if (!contact) return 0;
+
+        const rate = await getCashbackRate(reservation.operatorId);
+        if (rate <= 0) return 0;
+
+        const rideTotal = reservation.pricing?.total || 0;
+        const cashbackEarned = Math.round((rideTotal * rate) / 100);
+
+        if (cashbackEarned <= 0) return 0;
+
+        const currentBalance = contact.cashbackBalanceCents || 0;
+        contact.cashbackBalanceCents = currentBalance + cashbackEarned;
+        await contact.save();
+
+        await CashbackTransaction.create({
+            contactId: contact._id,
+            operatorId: reservation.operatorId,
+            type: 'earn',
+            amountCents: cashbackEarned,
+            balanceAfterCents: currentBalance + cashbackEarned,
+            reason: 'ride_completion',
+            referenceId: reservation._id,
+            referenceType: 'reservation',
+            metadata: {
+                rate: rate,
+                description: `Cashback earned from ride ${reservation.reservationNumber}`
+            }
+        });
+
+        return cashbackEarned;
+
+    } catch (error) {
+        console.error('Cashback earning error:', error);
+        return 0;
+    }
+};
 
 // ============================================
 // 1. GET CASHBACK SUMMARY
 // ============================================
 const getCashbackSummary = async (req, res) => {
     try {
-        const contact = await Contact.findOne({ 
-            userId: req.user._id, 
+        const contact = await Contact.findOne({
+            userId: req.user._id,
         });
 
         if (!contact) {
@@ -26,8 +85,8 @@ const getCashbackSummary = async (req, res) => {
             contactId: contact._id,
             isDeleted: false
         })
-        .sort({ createdAt: -1 })
-        .limit(10);
+            .sort({ createdAt: -1 })
+            .limit(10);
 
         // Get summary
         const summary = await CashbackTransaction.getSummary(contact._id);
@@ -42,14 +101,13 @@ const getCashbackSummary = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
 
-// ... rest of the controller
 // ============================================
 // 2. GET FULL LEDGER (Paginated)
 // ============================================
@@ -58,8 +116,8 @@ const getCashbackLedger = async (req, res) => {
         const { limit = 20, page = 1, type, from, to } = req.query;
         const skip = (page - 1) * limit;
 
-        const contact = await Contact.findOne({ 
-            userId: req.user._id, 
+        const contact = await Contact.findOne({
+            userId: req.user._id,
         });
 
         if (!contact) {
@@ -101,9 +159,9 @@ const getCashbackLedger = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
@@ -127,5 +185,7 @@ const getTransactionDescription = (transaction) => {
 
 module.exports = {
     getCashbackSummary,
-    getCashbackLedger
+    getCashbackLedger,
+    getCashbackRate,
+    earnCashback
 };

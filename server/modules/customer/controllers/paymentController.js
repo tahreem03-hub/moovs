@@ -3,6 +3,7 @@ const Contact = require('../../../models/Contact');
 const Reservation = require('../../../models/Reservation');
 const Invoice = require('../../../models/Invoice');
 const CashbackTransaction = require('../../../models/cashbackTransactions');
+const { earnCashback } = require('./cashbackController');
 
 // ============================================
 // 1. GET PAYMENT METHODS
@@ -326,14 +327,13 @@ const payInvoice = async (req, res) => {
         let amountToPay = invoice.total - (invoice.paidAmount || 0);
         let cashbackApplied = 0;
 
-        // Apply cashback if requested
+        // 1. REDEEM CASHBACK (if requested)  by default it is coming true from payload
         if (useCashback) {
             const cashbackBalance = contact.cashbackBalanceCents || 0;
             if (cashbackBalance > 0) {
                 cashbackApplied = Math.min(cashbackBalance, amountToPay);
                 amountToPay -= cashbackApplied;
 
-                // Record cashback redemption
                 await CashbackTransaction.create({
                     contactId: contact._id,
                     operatorId: invoice.operatorId || null,
@@ -348,13 +348,11 @@ const payInvoice = async (req, res) => {
                     }
                 });
 
-                // Update contact cashback balance
                 contact.cashbackBalanceCents = cashbackBalance - cashbackApplied;
                 await contact.save();
             }
         }
-
-        // Process payment
+        // 2. PROCESS PAYMENT
         let paymentResult = null;
         if (amountToPay > 0 && paymentMethodId) {
             const paymentMethod = contact.paymentMethods.find(
@@ -376,7 +374,7 @@ const payInvoice = async (req, res) => {
             });
         }
 
-        // ✅ FIX: Update invoice with correct fields
+        //  3. UPDATE INVOICE
         invoice.paidAmount = (invoice.paidAmount || 0) + (amountToPay || 0);
         invoice.cashbackApplied = (invoice.cashbackApplied || 0) + cashbackApplied;
         
@@ -392,13 +390,26 @@ const payInvoice = async (req, res) => {
 
         await invoice.save();
 
-        // Update reservation payment status if linked
+        // 4. UPDATE RESERVATION
         if (invoice.reservationId) {
             await Reservation.findByIdAndUpdate(invoice.reservationId, {
                 paymentStatus: 'paid',
                 isClosed: true,
                 closedAt: new Date()
             });
+        }
+
+        // 5. EARN NEW CASHBACK (ADD THIS!)
+        if (invoice.reservationId && amountToPay > 0) {
+            try {
+                const reservation = await Reservation.findById(invoice.reservationId);
+                if (reservation) {
+                   await earnCashback(reservation, contact)
+                }
+            } catch (error) {
+                console.error('Cashback earning error:', error);
+                
+            }
         }
 
         return res.status(200).json({
@@ -408,6 +419,7 @@ const payInvoice = async (req, res) => {
                 invoice,
                 amountPaid: (amountToPay || 0) + cashbackApplied,
                 cashbackApplied,
+                cashbackBalance: contact.cashbackBalanceCents || 0,
                 paymentResult
             }
         });

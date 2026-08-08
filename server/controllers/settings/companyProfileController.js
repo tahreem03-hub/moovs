@@ -642,6 +642,61 @@ const updateCustomerPortalPromoCodes = async (req, res) => {
   }
 };
 
+
+
+// ============ CASHBACK SETTINGS ============
+const getCashbackSettings = async (req, res) => {
+  try {
+    const profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    if (!profile) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Profile not found' 
+      });
+    }
+    return res.status(200).json({ 
+      success: true, 
+      data: profile.cashback || { enabled: true, rate: 5, minRideAmount: 0, maxRedeemPercent: 100, expiryDays: 365 }
+    });
+  } catch (error) {
+    console.error('Get cashback error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch cashback settings' 
+    });
+  }
+};
+
+const updateCashbackSettings = async (req, res) => {
+  try {
+    let profile = await CompanyProfile.findOne({ operatorId: req.user._id });
+    
+    if (!profile) {
+      profile = await CompanyProfile.create({
+        operatorId: req.user._id,
+        name: 'My Transportation Company',
+        email: 'info@mycompany.com',
+        phone: '+1 234 567 8900'
+      });
+    }
+    
+    profile.cashback = { ...profile.cashback, ...req.body };
+    await profile.save();
+    
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Cashback settings updated', 
+      data: profile.cashback 
+    });
+  } catch (error) {
+    console.error('Update cashback error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update cashback settings' 
+    });
+  }
+};
+
 module.exports = {
   getCompanyProfile,
   updateCompanyProfile,
@@ -660,5 +715,7 @@ module.exports = {
   getCustomerPortalBranding,
   updateCustomerPortalBranding,
   getCustomerPortalPromoCodes,
-  updateCustomerPortalPromoCodes
+  updateCustomerPortalPromoCodes,
+  getCashbackSettings,
+  updateCashbackSettings
 };
