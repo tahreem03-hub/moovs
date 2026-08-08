@@ -38,8 +38,6 @@ const {
 } = require('../controllers/dashboardController');
 
 const {
-    requestQuote,
-    getQuotes,
     createReservation,
     getReservations,
     getReservationDetail,
@@ -122,9 +120,6 @@ router.delete('/profile/passengers/:passengerId', removeLinkedPassenger);
 router.get('/profile/notifications', getNotificationPreferences);
 router.put('/profile/notifications', updateNotificationPreferences);
 
-// ============ QUOTES ============
-router.post('/quotes', requestQuote);
-router.get('/quotes', getQuotes);
 
 // ============ RESERVATIONS ============
 router.get('/reservations', getReservations);
